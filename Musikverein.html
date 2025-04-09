@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MV Endersbach Musikarchiv</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #6d1a36;
+            --secondary-color: #8c2d4d;
+            --background: #f8f9fa;
+            --star-color: #ffc107;
+            --button-text: white;
+            --remove-color: #e74c3c;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--background);
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .header-logo svg {
+            width: 40px;
+            height: 40px;
+            fill: none;
+            stroke: var(--primary-color);
+            stroke-width: 1.5;
+        }
+
+        .search-container {
+            position: relative;
+            width: 100%;
+        }
+
+        #searchInput {
+            width: 100%;
+            padding: 12px 35px 12px 20px;
+            font-size: 1.1rem;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            transition: all 0.3s;
+            box-sizing: border-box;
+        }
+
+        #searchInput:focus {
+            border-color: var(--primary-color);
+            outline: none;
+        }
+
+        .clear-search {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: #999;
+            display: none;
+            padding: 5px;
+        }
+
+        .clear-search:hover {
+            color: var(--primary-color);
+        }
+
+        .search-header {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 1px 10px rgba(0,0,0,0.05);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .results-table th,
+        .results-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .results-table th {
+            background-color: var(--primary-color);
+            color: white;
+            cursor: pointer;
+        }
+
+        .results-table tr:hover {
+            background-color: #f5f6fa;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            background: var(--primary-color);
+            color: var(--button-text);
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        button:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .add-to-setlist {
+            color: #ccc;
+            cursor: pointer;
+            font-size: 2rem;
+            transition: all 0.2s;
+            text-align: center;
+            display: block;
+            line-height: 1;
+        }
+
+        .add-to-setlist:hover {
+            color: var(--star-color);
+            transform: scale(1.2);
+        }
+
+        .add-to-setlist.in-setlist {
+            color: var(--star-color);
+        }
+
+        .drag-handle {
+            cursor: ns-resize;
+            color: transparent;
+            padding: 0 15px;
+            font-size: 1.5rem;
+            user-select: none;
+            transition: color 0.2s;
+        }
+
+        .setlist-row:hover .drag-handle {
+            color: #666;
+        }
+
+        .remove-from-setlist {
+            color: #ccc;
+            cursor: pointer;
+            font-size: 1.5rem;
+            transition: all 0.2s;
+            text-align: center;
+            display: block;
+            line-height: 1;
+        }
+
+        .remove-from-setlist:hover {
+            color: var(--remove-color);
+            transform: scale(1.2);
+        }
+
+        .setlist-row {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .setlist-row.dragging {
+            background: #f8f8f8;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+
+        .divider-row {
+            background-color: #f0f0f0;
+            text-align: center;
+            font-weight: bold;
+            color: var(--primary-color);
+            cursor: pointer;
+        }
+
+        .divider-row:hover {
+            background-color: #e0e0e0;
+        }
+
+        .setlist-name-input {
+            padding: 10px;
+            border: 2px solid var(--primary-color);
+            border-radius: 5px;
+            font-size: 1rem;
+            margin-bottom: 15px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .results-table th, 
+            .results-table td {
+                padding: 10px 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="search-header" id="searchHeader">
+            <div class="header-logo">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 17C12 17.8284 11.3284 18.5 10.5 18.5C9.67157 18.5 9 17.8284 9 17C9 16.1716 9.67157 15.5 10.5 15.5C11.3284 15.5 12 16.1716 12 17ZM12 17V10.5C12 12.1569 13.8954 13.5 15 13.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M19.5617 7C19.7904 5.69523 18.7863 4.5 17.4617 4.5H6.53788C5.21323 4.5 4.20922 5.69523 4.43784 7"/>
+                    <path d="M17.4999 4.5C17.5283 4.24092 17.5425 4.11135 17.5427 4.00435C17.545 2.98072 16.7739 2.12064 15.7561 2.01142C15.6497 2 15.5194 2 15.2588 2H8.74099C8.48035 2 8.35002 2 8.24362 2.01142C7.22584 2.12064 6.45481 2.98072 6.45704 4.00434C6.45727 4.11135 6.47146 4.2409 6.49983 4.5"/>
+                    <path d="M21.1935 16.793C20.8437 19.2739 20.6689 20.5143 19.7717 21.2572C18.8745 22 17.5512 22 14.9046 22H9.09536C6.44881 22 5.12553 22 4.22834 21.2572C3.33115 20.5143 3.15626 19.2739 2.80648 16.793L2.38351 13.793C1.93748 10.6294 1.71447 9.04765 2.66232 8.02383C3.61017 7 5.29758 7 8.67239 7H15.3276C18.7024 7 20.3898 7 21.3377 8.02383C22.0865 8.83268 22.1045 9.98979 21.8592 12" stroke-linecap="round"/>
+                </svg>
+                <h1>MV Endersbach Musikarchiv</h1>
+            </div>
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Titel oder Nummer eingeben..." autofocus>
+                <button class="clear-search" onclick="resetSearch()">✕</button>
+            </div>
+            <div class="controls">
+                <button onclick="showSetlist()">Setlist anzeigen</button>
+            </div>
+        </div>
+
+        <table class="results-table" id="mainTable">
+            <thead>
+                <tr>
+                    <th onclick="sortTable(0)">Nummer</th>
+                    <th onclick="sortTable(1)">Titel</th>
+                    <th style="width: 60px;">Setlist</th>
+                </tr>
+            </thead>
+            <tbody id="resultsBody">
+                <!-- Results will be inserted here -->
+            </tbody>
+        </table>
+        <div id="noResults" class="no-results" style="display: none;">
+            Keine Ergebnisse gefunden
+        </div>
+
+        <div id="setlistView" style="display: none;">
+            <h2>Setlist</h2>
+            <input type="text" id="setlistName" class="setlist-name-input" placeholder="Setlist Namen eingeben">
+            <div class="controls">
+                <button onclick="backToMainView()">Zurück zur Hauptansicht</button>
+                <button onclick="generatePDF()">PDF erstellen</button>
+                <button onclick="addDivider()">Teilung hinzufügen</button>
+            </div>
+            <table class="results-table">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;"></th>
+                        <th>Nummer</th>
+                        <th>Titel</th>
+                        <th style="width: 50px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="setlistBody">
+                    <!-- Setlist items will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // jsPDF verfügbar machen
+        const { jsPDF } = window.jspdf;
+
+        // Vollständige Musikdaten
+        const allMusic = [
+            {number: 1, title: "Regimentskinder"},
+            {number: 2, title: "Ein halbes Jahrhundert"},
+            {number: 3, title: "Colonel Bogey March"},
+            {number: 4, title: "Fliegermarsch"},
+            {number: 5, title: "Gablonzer Perlen (Grünes Heft)"},
+            {number: 6, title: "Die Sonne geht auf"},
+            {number: 7, title: "Kaiserin Sissi"},
+            {number: 8, title: "Steeephanspolka"},
+            {number: 9, title: "Zum Städtele hinaus"},
+            {number: 10, title: "Musik verbindet"},
+            {number: 11, title: "Der Rumtreiber"},
+            {number: 12, title: "Stückbrimische Polka"},
+            {number: 13, title: "Jubiläumsklänge"},
+            {number: 14, title: "Kuschel-Polka"},
+            {number: 15, title: "Auf der Vogelwiese"},
+            {number: 16, title: "Egerländer Traum"},
+            {number: 17, title: "Morgengedanken"},
+            {number: 18, title: "Slavonicka-Polka"},
+            {number: 19, title: "Von Freund zu Freund"},
+            {number: 20, title: "Böhmisches Liebespärchen"},
+            {number: 21, title: "Böhmischer Traum"},
+            {number: 22, title: "Böhmische Nacht"},
+            {number: 23, title: "Böhmisch-Ola"},
+            {number: 24, title: "Skoda Lasky"},
+            {number: 25, title: "Willkommen Mädchen"},
+            {number: 26, title: "Hello Mary Lou"},
+            {number: 27, title: "Nessaja"},
+            {number: 28, title: "Spirit Of 89"},
+            {number: 29, title: "Hawaii-Five-0"},
+            {number: 30, title: "Matrimony"},
+            {number: 31, title: "Katharinen Polka"},
+            {number: 32, title: "Attila"},
+            {number: 33, title: "Washington Post"},
+            {number: 34, title: "Böhmisches Gold"},
+            {number: 35, title: "The 80's Collection"},
+            {number: 36, title: "80er KULT(four)"},
+            {number: 37, title: "Robbie Williams"},
+            {number: 38, title: "Summerlight Rock"},
+            {number: 39, title: "Rock'n Roll forever"},
+            {number: 40, title: "Chattanooga Choo Choo"},
+            {number: 41, title: "Golden Swing Time"},
+            {number: 42, title: "Rock It"},
+            {number: 43, title: "Deep Purple Medley"},
+            {number: 44, title: "Jive Hits"},
+            {number: 45, title: "Jive Hits Vol. 2"},
+            {number: 46, title: "Birnpolka"},
+            {number: 47, title: "Irish Folk"},
+            {number: 48, title: "Wien bleibt Wien"},
+            {number: 49, title: "Coldplay on Stage"},
+            {number: 50, title: "Boney M. Super Hits"},
+            {number: 51, title: "Odie's Spectacular"},
+            {number: 52, title: "Hands Up"},
+            {number: 53, title: "A Tribute to Michael Jackson"},
+            {number: 54, title: "St. Louis Blues"},
+            {number: 55, title: "Happy Spain"},
+            {number: 56, title: "Böhmische Liebe"},
+            {number: 57, title: "Musikantenfeundschaft"},
+            {number: 58, title: "Beschwingt und heiter"},
+            {number: 59, title: "Federweißer Polka"},
+            {number: 60, title: "Hausi-Polka"},
+            {number: 61, title: "In der Weinschenke"},
+            {number: 62, title: "Tief drin im Böhmerwald"},
+            {number: 63, title: "Wir Musikanten"},
+            {number: 64, title: "Florentiner Marsch"},
+            {number: 65, title: "Löhlbacher Musikantenpolka"},
+            {number: 66, title: "Der Faulenzer"},
+            {number: 67, title: "Salternaryr Polka"},
+            {number: 68, title: "180ger Marsch"},
+            {number: 69, title: "Chicago"},
+            {number: 70, title: "Golden Sixties"},
+            {number: 71, title: "Immer wieder Siebziger"},
+            {number: 72, title: "A Rock Selection"},
+            {number: 73, title: "Die tollkühnen Männer..."},
+            {number: 74, title: "Modern Girl"},
+            {number: 75, title: "Späte Liebe"},
+            {number: 76, title: "Träumerei"},
+            {number: 77, title: "Schöne Pragetin"},
+            {number: 78, title: "Blas - Musik in die Welt!"},
+            {number: 79, title: "ABBA Gold"},
+            {number: 80, title: "James Last Golden Hits"},
+            {number: 81, title: "Brauhauspolka"},
+            {number: 82, title: "Heidrun Polka"},
+            {number: 83, title: "Mandy"},
+            {number: 84, title: "Hits der 80er"},
+            {number: 85, title: "Gentilemen of Music"},
+            {number: 86, title: "Hair"},
+            {number: 87, title: "Shred Meister"},
+            {number: 88, title: "Watermelon Man"},
+            {number: 89, title: "Fuchsgraben"},
+            {number: 90, title: "Happy Trombones"},
+            {number: 91, title: "Italo Pop Classics"},
+            {number: 92, title: "Viva Colonia"},
+            {number: 93, title: "Hulapalu"},
+            {number: 94, title: "Nur noch Schuhe an"},
+            {number: 95, title: "Ein Komliment"},
+            {number: 96, title: "Moskau"},
+            {number: 97, title: "Fly Me To The Moon"},
+            {number: 98, title: "Pur Party Hit Mix"},
+            {number: 99, title: "Skandal im Sperberzirk"},
+            {number: 100, title: "Dem Land Tirol die Treue"},
+            {number: 101, title: "Ham kummst"},
+            {number: 102, title: "Cordula Grün"},
+            {number: 103, title: "I'm Gonna Be (500 Miles)"},
+            {number: 104, title: "Narcottic"},
+            {number: 105, title: "Altes Fieber"},
+            {number: 106, title: "Layla"},
+            {number: 107, title: "A Million Dreams"},
+            {number: 108, title: "Happy"},
+            {number: 109, title: "Latin Gold"},
+            {number: 110, title: "Rolling in the Deep"},
+            {number: 111, title: "Smoke on the Water"},
+            {number: 112, title: "Blinding Lights"},
+            {number: 113, title: "Pata Pata"},
+            {number: 114, title: "Malvasia"},
+            {number: 115, title: "Salemonia"},
+            {number: 116, title: "Deutschmeister Regimentsmarsch"},
+            {number: 117, title: "Teppichklopfer-Polka"},
+            {number: 118, title: "Auf Wanderschaft (Rückseite von der Teppichklopfer-Polka)"},
+            {number: 119, title: "Musik im Abendlicht"}
+        ];
+
+        let currentSortColumn = 0;
+        let currentData = [...allMusic];
+        let setlist = JSON.parse(localStorage.getItem('setlist')) || [];
+        let setlistName = localStorage.getItem('setlistName') || '';
+        let dividerCount = 0;
+
+        // Clear-Button nur bei Inhalt anzeigen
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            document.querySelector('.clear-search').style.display = 
+                this.value.trim() ? 'block' : 'none';
+            filterResults(this.value);
+        });
+
+        function populateTable(data) {
+            const tbody = document.getElementById('resultsBody');
+            tbody.innerHTML = '';
+            
+            if (data.length === 0) {
+                document.getElementById('noResults').style.display = 'block';
+                return;
+            }
+            
+            document.getElementById('noResults').style.display = 'none';
+            
+            data.forEach(item => {
+                const row = document.createElement('tr');
+                const inSetlist = setlist.some(i => typeof i === 'number' && i === item.number);
+                row.innerHTML = `
+                    <td>${item.number}</td>
+                    <td>${item.title}</td>
+                    <td><span class="add-to-setlist ${inSetlist ? 'in-setlist' : ''}" onclick="toggleSetlist(${item.number}, this)">${inSetlist ? '★' : '☆'}</span></td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            currentData = [...data];
+        }
+
+        function populateSetlist() {
+            const tbody = document.getElementById('setlistBody');
+            tbody.innerHTML = '';
+            
+            if (setlist.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Keine Stücke in der Setlist</td></tr>';
+                return;
+            }
+
+            dividerCount = 0;
+            setlist.forEach((item, index) => {
+                if (item === 'DIVIDER') {
+                    dividerCount++;
+                    const row = document.createElement('tr');
+                    row.className = 'divider-row';
+                    row.innerHTML = `
+                        <td colspan="4">--- TEIL ${dividerCount + 1} ---</td>
+                    `;
+                    row.onclick = function() {
+                        if (confirm('Teilung entfernen? Die Stücke bleiben erhalten.')) {
+                            setlist.splice(index, 1);
+                            localStorage.setItem('setlist', JSON.stringify(setlist));
+                            populateSetlist();
+                        }
+                    };
+                    tbody.appendChild(row);
+                } else {
+                    const musicItem = allMusic.find(i => i.number === item);
+                    if (musicItem) {
+                        const row = document.createElement('tr');
+                        row.className = 'setlist-row';
+                        row.dataset.number = musicItem.number;
+                        row.innerHTML = `
+                            <td><span class="drag-handle">≡</span></td>
+                            <td>${musicItem.number}</td>
+                            <td>${musicItem.title}</td>
+                            <td><span class="remove-from-setlist" onclick="removeFromSetlist(${musicItem.number})">✕</span></td>
+                        `;
+                        tbody.appendChild(row);
+                    }
+                }
+            });
+
+            makeDraggable();
+        }
+
+        function makeDraggable() {
+            const tbody = document.getElementById('setlistBody');
+            let draggedItem = null;
+            let placeholder = document.createElement('tr');
+            placeholder.className = 'placeholder';
+            placeholder.style.height = '40px';
+            placeholder.style.backgroundColor = '#f9f9f9';
+
+            tbody.querySelectorAll('tr').forEach(row => {
+                row.draggable = true;
+
+                row.addEventListener('dragstart', function(e) {
+                    draggedItem = this;
+                    this.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/html', this.innerHTML);
+                    
+                    placeholder.style.height = `${this.offsetHeight}px`;
+                    this.parentNode.insertBefore(placeholder, this.nextSibling);
+                });
+
+                row.addEventListener('dragend', function() {
+                    this.classList.remove('dragging');
+                    if (placeholder.parentNode) {
+                        placeholder.parentNode.removeChild(placeholder);
+                    }
+                });
+
+                row.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    if (draggedItem !== this && draggedItem !== placeholder) {
+                        const rect = this.getBoundingClientRect();
+                        const midY = rect.top + rect.height / 2;
+                        
+                        if (e.clientY > midY) {
+                            if (this.nextSibling !== placeholder) {
+                                tbody.insertBefore(placeholder, this.nextSibling);
+                            }
+                        } else {
+                            if (this.previousSibling !== placeholder) {
+                                tbody.insertBefore(placeholder, this);
+                            }
+                        }
+                    }
+                });
+            });
+
+            tbody.addEventListener('drop', function(e) {
+                e.preventDefault();
+                if (draggedItem && placeholder.parentNode) {
+                    tbody.insertBefore(draggedItem, placeholder);
+                    placeholder.parentNode.removeChild(placeholder);
+                    
+                    const newOrder = [];
+                    tbody.querySelectorAll('tr').forEach(row => {
+                        if (row.classList.contains('divider-row')) {
+                            newOrder.push('DIVIDER');
+                        } else if (row.dataset.number) {
+                            newOrder.push(parseInt(row.dataset.number));
+                        }
+                    });
+                    setlist = newOrder;
+                    localStorage.setItem('setlist', JSON.stringify(setlist));
+                }
+            });
+        }
+
+        function toggleSetlist(number, element) {
+            const index = setlist.findIndex(i => i === number);
+            if (index === -1) {
+                setlist.push(number);
+                element.classList.add('in-setlist');
+                element.textContent = '★';
+            } else {
+                setlist.splice(index, 1);
+                element.classList.remove('in-setlist');
+                element.textContent = '☆';
+            }
+            localStorage.setItem('setlist', JSON.stringify(setlist));
+        }
+
+        function removeFromSetlist(number) {
+            const index = setlist.findIndex(i => i === number);
+            if (index !== -1) {
+                setlist.splice(index, 1);
+                localStorage.setItem('setlist', JSON.stringify(setlist));
+                populateSetlist();
+            }
+        }
+
+        function filterResults(searchTerm) {
+            const term = searchTerm.toLowerCase();
+            const results = allMusic.filter(item => 
+                item.title.toLowerCase().includes(term) ||
+                item.number.toString().includes(term)
+            );
+            populateTable(results);
+        }
+
+        function sortTable(column) {
+            currentSortColumn = column;
+            
+            allMusic.sort((a, b) => {
+                const valA = column === 0 ? a.number : a.title;
+                const valB = column === 0 ? b.number : b.title;
+                return valA > valB ? 1 : -1;
+            });
+
+            populateTable(allMusic);
+        }
+
+        function resetSearch() {
+            document.getElementById('searchInput').value = '';
+            document.querySelector('.clear-search').style.display = 'none';
+            populateTable(allMusic);
+        }
+
+        function showSetlist() {
+            document.getElementById('searchHeader').style.display = 'none';
+            document.getElementById('mainTable').style.display = 'none';
+            document.getElementById('setlistView').style.display = 'block';
+            document.getElementById('setlistName').value = setlistName;
+            populateSetlist();
+        }
+
+        function backToMainView() {
+            setlistName = document.getElementById('setlistName').value;
+            localStorage.setItem('setlistName', setlistName);
+            
+            document.getElementById('searchHeader').style.display = 'block';
+            document.getElementById('mainTable').style.display = 'table';
+            document.getElementById('setlistView').style.display = 'none';
+            resetSearch();
+        }
+
+        function addDivider() {
+            // Nur eine Teilung erlauben
+            if (setlist.includes('DIVIDER')) {
+                alert("Es gibt bereits eine Teilung in der Setlist");
+                return;
+            }
+            
+            setlist.push('DIVIDER');
+            localStorage.setItem('setlist', JSON.stringify(setlist));
+            populateSetlist();
+        }
+
+        function generatePDF() {
+            if (setlist.length === 0) {
+                alert("Die Setlist ist leer. Fügen Sie erst Stücke hinzu.");
+                return;
+            }
+
+            const doc = new jsPDF();
+            
+            // Setlist Name
+            const name = document.getElementById('setlistName').value || 'Setlist';
+            setlistName = name;
+            localStorage.setItem('setlistName', name);
+            
+            // Titel
+            doc.setFontSize(20);
+            doc.setTextColor(109, 26, 54);
+            doc.text(`MV Endersbach - ${name}`, 105, 20, { align: 'center' });
+            
+            // Datum
+            doc.setFontSize(12);
+            doc.setTextColor(100, 100, 100);
+            const today = new Date();
+            doc.text(`Erstellt am: ${today.toLocaleDateString('de-DE')}`, 105, 30, { align: 'center' });
+            
+            // Tabellendaten vorbereiten
+            const columns = [
+                { header: 'Nr.', dataKey: 'index' },
+                { header: 'Nummer', dataKey: 'number' },
+                { header: 'Titel', dataKey: 'title' }
+            ];
+            
+            const rows = [];
+            let currentPart = 1;
+            
+            setlist.forEach((item, index) => {
+                if (item === 'DIVIDER') {
+                    currentPart = 2;
+                } else {
+                    const musicItem = allMusic.find(i => i.number === item);
+                    if (musicItem) {
+                        rows.push({
+                            index: index + 1,
+                            number: musicItem.number,
+                            title: musicItem.title,
+                            part: currentPart
+                        });
+                    }
+                }
+            });
+            
+            // Erste Tabelle (Teil 1)
+            const part1Rows = rows.filter(row => row.part === 1);
+            if (part1Rows.length > 0) {
+                doc.autoTable({
+                    startY: 40,
+                    head: [columns.map(col => col.header)],
+                    body: part1Rows.map(row => [row.index, row.number, row.title]),
+                    headStyles: {
+                        fillColor: [109, 26, 54],
+                        textColor: 255,
+                        fontStyle: 'bold'
+                    },
+                    margin: { top: 40 },
+                    styles: {
+                        fontSize: 10,
+                        cellPadding: 5
+                    },
+                    columnStyles: {
+                        0: { cellWidth: 15 },
+                        1: { cellWidth: 25 }
+                    }
+                });
+            }
+            
+            // Zweite Tabelle (Teil 2)
+            const part2Rows = rows.filter(row => row.part === 2);
+            if (part2Rows.length > 0) {
+                // Teilungsüberschrift
+                doc.setFontSize(14);
+                doc.setTextColor(109, 26, 54);
+                doc.text('Teil 2', 105, doc.lastAutoTable.finalY + 15, { align: 'center' });
+                
+                doc.autoTable({
+                    startY: doc.lastAutoTable.finalY + 20,
+                    head: [columns.map(col => col.header)],
+                    body: part2Rows.map(row => [row.index, row.number, row.title]),
+                    headStyles: {
+                        fillColor: [109, 26, 54],
+                        textColor: 255,
+                        fontStyle: 'bold'
+                    },
+                    styles: {
+                        fontSize: 10,
+                        cellPadding: 5
+                    },
+                    columnStyles: {
+                        0: { cellWidth: 15 },
+                        1: { cellWidth: 25 }
+                    }
+                });
+            }
+            
+            // Footer
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            doc.text('© MV Endersbach', 105, doc.internal.pageSize.height - 10, { align: 'center' });
+            
+            doc.save(`${name.replace(/[^a-z0-9]/gi, '_')}_${today.toISOString().split('T')[0]}.pdf`);
+        }
+
+        // Initial load
+        sortTable(0);
+    </script>
+</body>
+</html>
