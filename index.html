@@ -32,7 +32,7 @@
             display: flex;
             align-items: center;
             gap: 15px;
-            margin-bottom: 10px;
+            margin-bottom: 20px;
         }
 
         .header-logo svg {
@@ -46,6 +46,7 @@
         .search-container {
             position: relative;
             width: 100%;
+            margin-bottom: 15px;
         }
 
         #searchInput {
@@ -74,11 +75,14 @@
             cursor: pointer;
             color: #999;
             display: none;
-            padding: 5px;
+            padding: 0;
+            margin: 0;
+            line-height: 1;
         }
 
         .clear-search:hover {
             color: var(--primary-color);
+            transform: translateY(-50%) scale(1.1);
         }
 
         .search-header {
@@ -123,7 +127,7 @@
 
         .controls {
             display: flex;
-            gap: 10px;
+            gap: 15px;
             margin-bottom: 1rem;
             flex-wrap: wrap;
         }
@@ -167,7 +171,7 @@
         }
 
         .drag-handle {
-            cursor: ns-resize;
+            cursor: move;
             color: transparent;
             padding: 0 15px;
             font-size: 1.5rem;
@@ -175,12 +179,13 @@
             transition: color 0.2s;
         }
 
-        .setlist-row:hover .drag-handle {
+        .setlist-row:hover .drag-handle,
+        .setlist-row:hover .remove-from-setlist {
             color: #666;
         }
 
         .remove-from-setlist {
-            color: #ccc;
+            color: transparent;
             cursor: pointer;
             font-size: 1.5rem;
             transition: all 0.2s;
@@ -190,18 +195,19 @@
         }
 
         .remove-from-setlist:hover {
-            color: var(--remove-color);
+            color: var(--remove-color) !important;
             transform: scale(1.2);
         }
 
         .setlist-row {
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.2s;
+            position: relative;
         }
 
         .setlist-row.dragging {
-            background: #f8f8f8;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            z-index: 10;
+            opacity: 0.8;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 1000;
         }
 
         .divider-row {
@@ -224,6 +230,16 @@
             margin-bottom: 15px;
             width: 100%;
             max-width: 400px;
+        }
+
+        .drag-ghost {
+            position: absolute;
+            width: 100%;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            pointer-events: none;
+            z-index: 100;
+            opacity: 0.9;
         }
 
         @media (max-width: 600px) {
@@ -268,7 +284,6 @@
                 </tr>
             </thead>
             <tbody id="resultsBody">
-                <!-- Results will be inserted here -->
             </tbody>
         </table>
         <div id="noResults" class="no-results" style="display: none;">
@@ -293,17 +308,14 @@
                     </tr>
                 </thead>
                 <tbody id="setlistBody">
-                    <!-- Setlist items will be inserted here -->
                 </tbody>
             </table>
         </div>
     </div>
 
     <script>
-        // jsPDF verfügbar machen
         const { jsPDF } = window.jspdf;
 
-        // Vollständige Musikdaten
         const allMusic = [
             {number: 1, title: "Regimentskinder"},
             {number: 2, title: "Ein halbes Jahrhundert"},
@@ -430,12 +442,12 @@
         let currentData = [...allMusic];
         let setlist = JSON.parse(localStorage.getItem('setlist')) || [];
         let setlistName = localStorage.getItem('setlistName') || '';
-        let dividerCount = 0;
+        let dragGhost = null;
+        let draggedRow = null;
+        let draggedRowIndex = -1;
 
-        // Clear-Button nur bei Inhalt anzeigen
         document.getElementById('searchInput').addEventListener('input', function(e) {
-            document.querySelector('.clear-search').style.display = 
-                this.value.trim() ? 'block' : 'none';
+            document.querySelector('.clear-search').style.display = this.value.trim() ? 'block' : 'none';
             filterResults(this.value);
         });
 
@@ -473,17 +485,17 @@
                 return;
             }
 
-            dividerCount = 0;
+            let partCount = 1;
             setlist.forEach((item, index) => {
                 if (item === 'DIVIDER') {
-                    dividerCount++;
+                    partCount++;
                     const row = document.createElement('tr');
                     row.className = 'divider-row';
                     row.innerHTML = `
-                        <td colspan="4">--- TEIL ${dividerCount + 1} ---</td>
+                        <td colspan="4">--- TEIL ${partCount} ---</td>
                     `;
                     row.onclick = function() {
-                        if (confirm('Teilung entfernen? Die Stücke bleiben erhalten.')) {
+                        if (confirm('Teilung entfernen?')) {
                             setlist.splice(index, 1);
                             localStorage.setItem('setlist', JSON.stringify(setlist));
                             populateSetlist();
@@ -500,81 +512,118 @@
                             <td><span class="drag-handle">≡</span></td>
                             <td>${musicItem.number}</td>
                             <td>${musicItem.title}</td>
-                            <td><span class="remove-from-setlist" onclick="removeFromSetlist(${musicItem.number})">✕</span></td>
+                            <td><span class="remove-from-setlist">✕</span></td>
                         `;
                         tbody.appendChild(row);
                     }
                 }
             });
 
-            makeDraggable();
+            setupDragAndDrop();
         }
 
-        function makeDraggable() {
+        function setupDragAndDrop() {
             const tbody = document.getElementById('setlistBody');
-            let draggedItem = null;
-            let placeholder = document.createElement('tr');
-            placeholder.className = 'placeholder';
-            placeholder.style.height = '40px';
-            placeholder.style.backgroundColor = '#f9f9f9';
-
-            tbody.querySelectorAll('tr').forEach(row => {
-                row.draggable = true;
-
-                row.addEventListener('dragstart', function(e) {
-                    draggedItem = this;
-                    this.classList.add('dragging');
-                    e.dataTransfer.effectAllowed = 'move';
-                    e.dataTransfer.setData('text/html', this.innerHTML);
+            const rows = tbody.querySelectorAll('tr');
+            
+            rows.forEach(row => {
+                if (!row.classList.contains('divider-row')) {
+                    const handle = row.querySelector('.drag-handle');
                     
-                    placeholder.style.height = `${this.offsetHeight}px`;
-                    this.parentNode.insertBefore(placeholder, this.nextSibling);
-                });
-
-                row.addEventListener('dragend', function() {
-                    this.classList.remove('dragging');
-                    if (placeholder.parentNode) {
-                        placeholder.parentNode.removeChild(placeholder);
-                    }
-                });
-
-                row.addEventListener('dragover', function(e) {
-                    e.preventDefault();
-                    if (draggedItem !== this && draggedItem !== placeholder) {
-                        const rect = this.getBoundingClientRect();
-                        const midY = rect.top + rect.height / 2;
-                        
-                        if (e.clientY > midY) {
-                            if (this.nextSibling !== placeholder) {
-                                tbody.insertBefore(placeholder, this.nextSibling);
-                            }
-                        } else {
-                            if (this.previousSibling !== placeholder) {
-                                tbody.insertBefore(placeholder, this);
-                            }
-                        }
-                    }
-                });
-            });
-
-            tbody.addEventListener('drop', function(e) {
-                e.preventDefault();
-                if (draggedItem && placeholder.parentNode) {
-                    tbody.insertBefore(draggedItem, placeholder);
-                    placeholder.parentNode.removeChild(placeholder);
-                    
-                    const newOrder = [];
-                    tbody.querySelectorAll('tr').forEach(row => {
-                        if (row.classList.contains('divider-row')) {
-                            newOrder.push('DIVIDER');
-                        } else if (row.dataset.number) {
-                            newOrder.push(parseInt(row.dataset.number));
-                        }
+                    handle.addEventListener('mousedown', function(e) {
+                        startDrag(row, e);
                     });
-                    setlist = newOrder;
-                    localStorage.setItem('setlist', JSON.stringify(setlist));
                 }
             });
+            
+            document.addEventListener('mousemove', handleDrag);
+            document.addEventListener('mouseup', endDrag);
+        }
+
+        function startDrag(row, e) {
+            draggedRow = row;
+            draggedRowIndex = Array.from(row.parentNode.children).indexOf(row);
+            
+            dragGhost = row.cloneNode(true);
+            dragGhost.classList.add('drag-ghost');
+            dragGhost.style.width = `${row.offsetWidth}px`;
+            
+            const rect = row.getBoundingClientRect();
+            dragGhost.style.left = `${rect.left}px`;
+            dragGhost.style.top = `${rect.top}px`;
+            
+            document.body.appendChild(dragGhost);
+            
+            row.classList.add('dragging');
+            row.style.opacity = '0.5';
+            
+            dragGhost.style.transform = `translate(${e.clientX - rect.left - rect.width/2}px, ${e.clientY - rect.top - rect.height/2}px)`;
+            dragGhost.style.pointerEvents = 'none';
+            
+            e.preventDefault();
+        }
+
+        function handleDrag(e) {
+            if (!dragGhost) return;
+            
+            dragGhost.style.transform = `translate(${e.clientX - dragGhost.offsetWidth/2}px, ${e.clientY - dragGhost.offsetHeight/2}px)`;
+            
+            const tbody = document.getElementById('setlistBody');
+            const rows = Array.from(tbody.querySelectorAll('tr:not(.dragging)'));
+            const ghostRect = dragGhost.getBoundingClientRect();
+            const ghostCenterY = ghostRect.top + ghostRect.height / 2;
+            
+            let closestRow = null;
+            let closestDistance = Infinity;
+            let insertBefore = false;
+            
+            rows.forEach(row => {
+                const rect = row.getBoundingClientRect();
+                const rowCenterY = rect.top + rect.height / 2;
+                const distance = Math.abs(ghostCenterY - rowCenterY);
+                
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestRow = row;
+                    insertBefore = ghostCenterY < rowCenterY;
+                }
+            });
+            
+            if (closestRow && closestRow !== draggedRow) {
+                if (insertBefore && closestRow.previousElementSibling !== draggedRow) {
+                    tbody.insertBefore(draggedRow, closestRow);
+                } else if (!insertBefore && closestRow.nextElementSibling !== draggedRow) {
+                    tbody.insertBefore(draggedRow, closestRow.nextElementSibling);
+                }
+            }
+        }
+
+        function endDrag() {
+            if (!dragGhost) return;
+            
+            dragGhost.remove();
+            dragGhost = null;
+            
+            if (draggedRow) {
+                draggedRow.classList.remove('dragging');
+                draggedRow.style.opacity = '1';
+                
+                const newOrder = [];
+                const tbody = document.getElementById('setlistBody');
+                tbody.querySelectorAll('tr').forEach(row => {
+                    if (row.classList.contains('divider-row')) {
+                        newOrder.push('DIVIDER');
+                    } else if (row.dataset.number) {
+                        newOrder.push(parseInt(row.dataset.number));
+                    }
+                });
+                
+                setlist = newOrder;
+                localStorage.setItem('setlist', JSON.stringify(setlist));
+                
+                draggedRow = null;
+                draggedRowIndex = -1;
+            }
         }
 
         function toggleSetlist(number, element) {
@@ -591,14 +640,18 @@
             localStorage.setItem('setlist', JSON.stringify(setlist));
         }
 
-        function removeFromSetlist(number) {
-            const index = setlist.findIndex(i => i === number);
-            if (index !== -1) {
-                setlist.splice(index, 1);
-                localStorage.setItem('setlist', JSON.stringify(setlist));
-                populateSetlist();
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-from-setlist')) {
+                const row = e.target.closest('tr');
+                const number = parseInt(row.dataset.number);
+                const index = setlist.findIndex(i => i === number);
+                if (index !== -1) {
+                    setlist.splice(index, 1);
+                    localStorage.setItem('setlist', JSON.stringify(setlist));
+                    populateSetlist();
+                }
             }
-        }
+        });
 
         function filterResults(searchTerm) {
             const term = searchTerm.toLowerCase();
@@ -646,42 +699,53 @@
         }
 
         function addDivider() {
-            // Nur eine Teilung erlauben
-            if (setlist.includes('DIVIDER')) {
-                alert("Es gibt bereits eine Teilung in der Setlist");
+            const musicItems = setlist.filter(item => typeof item === 'number');
+            
+            if (musicItems.length < 2) {
+                alert("Mindestens 2 Stücke benötigt für eine Teilung");
                 return;
             }
             
-            setlist.push('DIVIDER');
+            if (setlist.includes('DIVIDER')) {
+                setlist.push('DIVIDER');
+            } else {
+                const insertAt = Math.floor(musicItems.length / 2);
+                let count = 0;
+                for (let i = 0; i < setlist.length; i++) {
+                    if (typeof setlist[i] === 'number') {
+                        count++;
+                        if (count > insertAt) {
+                            setlist.splice(i, 0, 'DIVIDER');
+                            break;
+                        }
+                    }
+                }
+            }
+            
             localStorage.setItem('setlist', JSON.stringify(setlist));
             populateSetlist();
         }
 
         function generatePDF() {
             if (setlist.length === 0) {
-                alert("Die Setlist ist leer. Fügen Sie erst Stücke hinzu.");
+                alert("Die Setlist ist leer");
                 return;
             }
 
             const doc = new jsPDF();
-            
-            // Setlist Name
             const name = document.getElementById('setlistName').value || 'Setlist';
             setlistName = name;
             localStorage.setItem('setlistName', name);
             
-            // Titel
             doc.setFontSize(20);
             doc.setTextColor(109, 26, 54);
             doc.text(`MV Endersbach - ${name}`, 105, 20, { align: 'center' });
             
-            // Datum
             doc.setFontSize(12);
             doc.setTextColor(100, 100, 100);
             const today = new Date();
             doc.text(`Erstellt am: ${today.toLocaleDateString('de-DE')}`, 105, 30, { align: 'center' });
             
-            // Tabellendaten vorbereiten
             const columns = [
                 { header: 'Nr.', dataKey: 'index' },
                 { header: 'Nummer', dataKey: 'number' },
@@ -689,11 +753,11 @@
             ];
             
             const rows = [];
-            let currentPart = 1;
+            let part = 1;
             
             setlist.forEach((item, index) => {
                 if (item === 'DIVIDER') {
-                    currentPart = 2;
+                    part++;
                 } else {
                     const musicItem = allMusic.find(i => i.number === item);
                     if (musicItem) {
@@ -701,65 +765,63 @@
                             index: index + 1,
                             number: musicItem.number,
                             title: musicItem.title,
-                            part: currentPart
+                            part: part
                         });
                     }
                 }
             });
             
-            // Erste Tabelle (Teil 1)
-            const part1Rows = rows.filter(row => row.part === 1);
-            if (part1Rows.length > 0) {
-                doc.autoTable({
-                    startY: 40,
-                    head: [columns.map(col => col.header)],
-                    body: part1Rows.map(row => [row.index, row.number, row.title]),
-                    headStyles: {
-                        fillColor: [109, 26, 54],
-                        textColor: 255,
-                        fontStyle: 'bold'
-                    },
-                    margin: { top: 40 },
-                    styles: {
-                        fontSize: 10,
-                        cellPadding: 5
-                    },
-                    columnStyles: {
-                        0: { cellWidth: 15 },
-                        1: { cellWidth: 25 }
-                    }
-                });
+            let currentPart = 1;
+            let partRows = rows.filter(row => row.part === currentPart);
+            
+            doc.autoTable({
+                startY: 40,
+                head: [columns.map(col => col.header)],
+                body: partRows.map(row => [row.index, row.number, row.title]),
+                headStyles: {
+                    fillColor: [109, 26, 54],
+                    textColor: 255,
+                    fontStyle: 'bold'
+                },
+                margin: { top: 40 },
+                styles: {
+                    fontSize: 10,
+                    cellPadding: 5
+                },
+                columnStyles: {
+                    0: { cellWidth: 15 },
+                    1: { cellWidth: 25 }
+                }
+            });
+            
+            for (let p = 2; p <= part; p++) {
+                partRows = rows.filter(row => row.part === p);
+                if (partRows.length > 0) {
+                    doc.setFontSize(14);
+                    doc.setTextColor(109, 26, 54);
+                    doc.text(`Teil ${p}`, 105, doc.lastAutoTable.finalY + 15, { align: 'center' });
+                    
+                    doc.autoTable({
+                        startY: doc.lastAutoTable.finalY + 20,
+                        head: [columns.map(col => col.header)],
+                        body: partRows.map(row => [row.index, row.number, row.title]),
+                        headStyles: {
+                            fillColor: [109, 26, 54],
+                            textColor: 255,
+                            fontStyle: 'bold'
+                        },
+                        styles: {
+                            fontSize: 10,
+                            cellPadding: 5
+                        },
+                        columnStyles: {
+                            0: { cellWidth: 15 },
+                            1: { cellWidth: 25 }
+                        }
+                    });
+                }
             }
             
-            // Zweite Tabelle (Teil 2)
-            const part2Rows = rows.filter(row => row.part === 2);
-            if (part2Rows.length > 0) {
-                // Teilungsüberschrift
-                doc.setFontSize(14);
-                doc.setTextColor(109, 26, 54);
-                doc.text('Teil 2', 105, doc.lastAutoTable.finalY + 15, { align: 'center' });
-                
-                doc.autoTable({
-                    startY: doc.lastAutoTable.finalY + 20,
-                    head: [columns.map(col => col.header)],
-                    body: part2Rows.map(row => [row.index, row.number, row.title]),
-                    headStyles: {
-                        fillColor: [109, 26, 54],
-                        textColor: 255,
-                        fontStyle: 'bold'
-                    },
-                    styles: {
-                        fontSize: 10,
-                        cellPadding: 5
-                    },
-                    columnStyles: {
-                        0: { cellWidth: 15 },
-                        1: { cellWidth: 25 }
-                    }
-                });
-            }
-            
-            // Footer
             doc.setFontSize(10);
             doc.setTextColor(100, 100, 100);
             doc.text('© MV Endersbach', 105, doc.internal.pageSize.height - 10, { align: 'center' });
@@ -767,7 +829,6 @@
             doc.save(`${name.replace(/[^a-z0-9]/gi, '_')}_${today.toISOString().split('T')[0]}.pdf`);
         }
 
-        // Initial load
         sortTable(0);
     </script>
 </body>
