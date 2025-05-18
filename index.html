@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="de">
-<head>
+<html lang="de"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MV Endersbach Musikarchiv</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --primary-color: #6d1a36;
@@ -24,7 +24,7 @@
         }
 
         .container {
-            max-width: 800px;
+            max-width: 1000px;
             margin: 0 auto;
         }
 
@@ -151,685 +151,1426 @@
             box-shadow: 0 4px 8px rgba(0,0,0,0.15);
         }
 
-        .add-to-setlist {
+        .star-button {
+            background: none;
+            border: none;
             color: #ccc;
+            font-size: 1.5rem;
             cursor: pointer;
-            font-size: 2rem;
-            transition: all 0.2s;
-            text-align: center;
-            display: block;
-            line-height: 1;
+            transition: all 0.3s;
+            padding: 5px;
+            box-shadow: none;
         }
 
-        .add-to-setlist:hover {
+        .star-button:hover {
             color: var(--star-color);
             transform: scale(1.2);
+            background: none;
+            box-shadow: none;
         }
 
-        .add-to-setlist.in-setlist {
+        .star-button.active {
             color: var(--star-color);
         }
 
-        .drag-handle {
-            cursor: move;
-            color: transparent;
-            padding: 0 15px;
-            font-size: 1.5rem;
-            user-select: none;
-            transition: color 0.2s;
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ddd;
         }
 
-        .setlist-row:hover .drag-handle,
-        .setlist-row:hover .remove-from-setlist {
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            margin-right: 10px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            border-bottom: 3px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .tab:hover:not(.active) {
+            border-bottom: 3px solid #ddd;
+            background-color: #f5f5f5;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .setlist-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .setlist-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .setlist-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .setlist-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .setlist-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+            transition: background-color 0.2s;
+        }
+
+        .setlist-item:hover {
+            background-color: #f5f6fa;
+        }
+
+        .setlist-item-info {
+            flex-grow: 1;
+        }
+
+        .setlist-item-title {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .setlist-item-composer {
+            font-size: 0.9rem;
             color: #666;
         }
 
+        .setlist-item-actions {
+            display: flex;
+            gap: 10px;
+        }
+
         .remove-from-setlist {
-            color: transparent;
-            cursor: pointer;
-            font-size: 1.5rem;
-            transition: all 0.2s;
-            text-align: center;
-            display: block;
-            line-height: 1;
+            color: var(--remove-color);
+            background: none;
+            box-shadow: none;
+            padding: 5px 10px;
         }
 
         .remove-from-setlist:hover {
-            color: var(--remove-color) !important;
-            transform: scale(1.2);
+            background: #ffeeee;
+            color: var(--remove-color);
+            box-shadow: none;
+            transform: none;
         }
 
-        .setlist-row {
-            transition: all 0.2s;
-            position: relative;
+        .move-item {
+            background: #eee;
+            color: #333;
+            box-shadow: none;
+            padding: 5px 10px;
         }
 
-        .setlist-row.dragging {
-            opacity: 0.8;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            z-index: 1000;
+        .move-item:hover {
+            background: #ddd;
+            color: #333;
+            box-shadow: none;
+            transform: none;
         }
 
-        .divider-row {
-            background-color: #f0f0f0;
+        .empty-setlist {
             text-align: center;
+            padding: 30px;
+            color: #999;
+            font-style: italic;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
             font-weight: bold;
             color: var(--primary-color);
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #999;
+            padding: 0;
+        }
+
+        .modal-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-group label {
+            font-weight: bold;
+        }
+
+        .form-group input, .form-group textarea {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .badge-difficulty {
+            background-color: #e9ecef;
+            color: #495057;
+        }
+
+        .badge-easy {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .badge-medium {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-hard {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .badge-genre {
+            background-color: #cce5ff;
+            color: #004085;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+            gap: 5px;
+        }
+
+        .pagination button {
+            padding: 8px 12px;
+            border-radius: 5px;
+            background: white;
+            color: var(--primary-color);
+            border: 1px solid #ddd;
+            box-shadow: none;
+        }
+
+        .pagination button.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .pagination button:hover:not(.active) {
+            background: #f5f5f5;
+            transform: none;
+        }
+
+        .filter-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-dropdown {
+            padding: 8px 15px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            background: white;
             cursor: pointer;
         }
 
-        .divider-row:hover {
-            background-color: #e0e0e0;
+        .number-column {
+            width: 50px;
+            text-align: center;
         }
 
-        .setlist-name-input {
-            padding: 10px;
-            border: 2px solid var(--primary-color);
-            border-radius: 5px;
-            font-size: 1rem;
-            margin-bottom: 15px;
-            width: 100%;
-            max-width: 400px;
+        .setlist-drag-handle {
+            cursor: grab;
+            color: #999;
+            margin-right: 10px;
         }
 
-        .drag-ghost {
-            position: absolute;
-            width: 100%;
-            background: white;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            pointer-events: none;
-            z-index: 100;
-            opacity: 0.9;
+        .setlist-drag-handle:hover {
+            color: var(--primary-color);
         }
 
-        @media (max-width: 600px) {
-            .container {
-                padding: 10px;
+        .setlist-item.dragging {
+            opacity: 0.5;
+            background-color: #f0f0f0;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+            }
+            
+            .results-table {
+                font-size: 0.9rem;
             }
             
             .results-table th, 
             .results-table td {
-                padding: 10px 8px;
+                padding: 10px;
+            }
+            
+            .tab {
+                padding: 10px 15px;
+                font-size: 0.9rem;
+            }
+
+            .setlist-actions {
+                flex-direction: column;
             }
         }
     </style>
-</head>
+<link rel="stylesheet" href="chrome-extension://bojobppfploabceghnmlahpoonbcbacn/app/content-style.css"></head>
 <body>
     <div class="container">
-        <div class="search-header" id="searchHeader">
-            <div class="header-logo">
-                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 17C12 17.8284 11.3284 18.5 10.5 18.5C9.67157 18.5 9 17.8284 9 17C9 16.1716 9.67157 15.5 10.5 15.5C11.3284 15.5 12 16.1716 12 17ZM12 17V10.5C12 12.1569 13.8954 13.5 15 13.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M19.5617 7C19.7904 5.69523 18.7863 4.5 17.4617 4.5H6.53788C5.21323 4.5 4.20922 5.69523 4.43784 7"/>
-                    <path d="M17.4999 4.5C17.5283 4.24092 17.5425 4.11135 17.5427 4.00435C17.545 2.98072 16.7739 2.12064 15.7561 2.01142C15.6497 2 15.5194 2 15.2588 2H8.74099C8.48035 2 8.35002 2 8.24362 2.01142C7.22584 2.12064 6.45481 2.98072 6.45704 4.00434C6.45727 4.11135 6.47146 4.2409 6.49983 4.5"/>
-                    <path d="M21.1935 16.793C20.8437 19.2739 20.6689 20.5143 19.7717 21.2572C18.8745 22 17.5512 22 14.9046 22H9.09536C6.44881 22 5.12553 22 4.22834 21.2572C3.33115 20.5143 3.15626 19.2739 2.80648 16.793L2.38351 13.793C1.93748 10.6294 1.71447 9.04765 2.66232 8.02383C3.61017 7 5.29758 7 8.67239 7H15.3276C18.7024 7 20.3898 7 21.3377 8.02383C22.0865 8.83268 22.1045 9.98979 21.8592 12" stroke-linecap="round"/>
-                </svg>
-                <h1>MV Endersbach Musikarchiv</h1>
-            </div>
-            <div class="search-container">
-                <input type="text" id="searchInput" placeholder="Titel oder Nummer eingeben..." autofocus>
-                <button class="clear-search" onclick="resetSearch()">✕</button>
-            </div>
-            <div class="controls">
-                <button onclick="showSetlist()">Setlist anzeigen</button>
-            </div>
+        <div class="header-logo">
+            <svg viewBox="0 0 24 24">
+                <path d="M9 18V5l12-2v13"></path>
+                <circle cx="6" cy="18" r="3"></circle>
+                <circle cx="18" cy="16" r="3"></circle>
+            </svg>
+            <h1>MV Endersbach Musikarchiv</h1>
         </div>
 
-        <table class="results-table" id="mainTable">
-            <thead>
-                <tr>
-                    <th onclick="sortTable(0)">Nummer</th>
-                    <th onclick="sortTable(1)">Titel</th>
-                    <th style="width: 60px;">Setlist</th>
-                </tr>
-            </thead>
-            <tbody id="resultsBody">
-            </tbody>
-        </table>
-        <div id="noResults" class="no-results" style="display: none;">
-            Keine Ergebnisse gefunden
+        <div class="tabs">
+            <div class="tab active" data-tab="search">Musiksuche</div>
+            <div class="tab" data-tab="setlist">Setlist</div>
         </div>
 
-        <div id="setlistView" style="display: none;">
-            <h2>Setlist</h2>
-            <input type="text" id="setlistName" class="setlist-name-input" placeholder="Setlist Namen eingeben">
-            <div class="controls">
-                <button onclick="backToMainView()">Zurück zur Hauptansicht</button>
-                <button onclick="generatePDF()">PDF erstellen</button>
-                <button onclick="addDivider()">Teilung hinzufügen</button>
+        <div id="search-tab" class="tab-content active">
+            <div class="search-header">
+                <div class="search-container">
+                    <input type="text" id="searchInput" placeholder="Suche nach Titel, Nummer, Genre...">
+                    <button class="clear-search" id="clearSearch">×</button>
+                </div>
+                <div class="filter-container">
+                    <select id="genreFilter" class="filter-dropdown">
+                        <option value="">Alle Genres</option>
+                    <option value="Filmmusik">Filmmusik</option><option value="Folk">Folk</option><option value="Jazz">Jazz</option><option value="Konzertwerk">Konzertwerk</option><option value="Latin">Latin</option><option value="Marsch">Marsch</option><option value="Musical">Musical</option><option value="Polka">Polka</option><option value="Pop">Pop</option><option value="Rock">Rock</option><option value="Swing">Swing</option><option value="TV-Musik">TV-Musik</option><option value="Walzer">Walzer</option><option value="World">World</option></select>
+                </div>
+                <div class="controls">
+                    <button id="exportPDF">Als PDF exportieren</button>
+                    <button id="resetFilters">Filter zurücksetzen</button>
+                </div>
             </div>
-            <table class="results-table">
+
+            <table class="results-table" id="resultsTable">
                 <thead>
                     <tr>
-                        <th style="width: 50px;"></th>
-                        <th>Nummer</th>
-                        <th>Titel</th>
-                        <th style="width: 50px;"></th>
+                        <th class="number-column" data-sort="id">Nr.</th>
+                        <th data-sort="title">Titel</th>
+                        <th data-sort="genre">Genre</th>
+                        <th>Zur Setlist</th>
                     </tr>
                 </thead>
-                <tbody id="setlistBody">
-                </tbody>
+                <tbody id="resultsBody"><tr>
+                    <td class="number-column">1</td>
+                    <td>Regimentskinder</td>
+                    <td><span class="badge badge-genre">Marsch</span></td>
+                    <td>
+                        <button class="star-button " data-id="1">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </td>
+                </tr><tr>
+                    <td class="number-column">2</td>
+                    <td>Ein halbes Jahrhundert</td>
+                    <td><span class="badge badge-genre">Marsch</span></td>
+                    <td>
+                        <button class="star-button " data-id="2">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </td>
+                </tr><tr>
+                    <td class="number-column">3</td>
+                    <td>Colonel Bogey March</td>
+                    <td><span class="badge badge-genre">Marsch</span></td>
+                    <td>
+                        <button class="star-button " data-id="3">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </td>
+                </tr><tr>
+                    <td class="number-column">4</td>
+                    <td>Fliegermarsch</td>
+                    <td><span class="badge badge-genre">Marsch</span></td>
+                    <td>
+                        <button class="star-button " data-id="4">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </td>
+                </tr><tr>
+                    <td class="number-column">5</td>
+                    <td>Gablonzer Perlen (Grünes Heft 17)</td>
+                    <td><span class="badge badge-genre">Polka</span></td>
+                    <td>
+                        <button class="star-button " data-id="5">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </td>
+                </tr><tr>
+                    <td class="number-column">6</td>
+                    <td>Die Sonne geht auf</td>
+                    <td><span class="badge badge-genre">Konzertwerk</span></td>
+                    <td>
+                        <button class="star-button " data-id="6">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </td>
+                </tr><tr>
+                    <td class="number-column">7</td>
+                    <td>Kaiserin Sissi</td>
+                    <td><span class="badge badge-genre">Walzer</span></td>
+                    <td>
+                        <button class="star-button " data-id="7">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </td>
+                </tr><tr>
+                    <td class="number-column">8</td>
+                    <td>Steeephanspolka</td>
+                    <td><span class="badge badge-genre">Polka</span></td>
+                    <td>
+                        <button class="star-button " data-id="8">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </td>
+                </tr><tr>
+                    <td class="number-column">9</td>
+                    <td>Zum Städtele hinaus</td>
+                    <td><span class="badge badge-genre">Marsch</span></td>
+                    <td>
+                        <button class="star-button " data-id="9">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </td>
+                </tr><tr>
+                    <td class="number-column">10</td>
+                    <td>Musik verbindet</td>
+                    <td><span class="badge badge-genre">Konzertwerk</span></td>
+                    <td>
+                        <button class="star-button " data-id="10">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </td>
+                </tr><tr>
+                    <td class="number-column">11</td>
+                    <td>Der Rumtreiber</td>
+                    <td><span class="badge badge-genre">Polka</span></td>
+                    <td>
+                        <button class="star-button " data-id="11">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </td>
+                </tr><tr>
+                    <td class="number-column">12</td>
+                    <td>Stückbrimische Polka</td>
+                    <td><span class="badge badge-genre">Polka</span></td>
+                    <td>
+                        <button class="star-button " data-id="12">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </td>
+                </tr><tr>
+                    <td class="number-column">13</td>
+                    <td>Jubiläumsklänge</td>
+                    <td><span class="badge badge-genre">Marsch</span></td>
+                    <td>
+                        <button class="star-button " data-id="13">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </td>
+                </tr><tr>
+                    <td class="number-column">14</td>
+                    <td>Kuschel-Polka</td>
+                    <td><span class="badge badge-genre">Polka</span></td>
+                    <td>
+                        <button class="star-button " data-id="14">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </td>
+                </tr><tr>
+                    <td class="number-column">15</td>
+                    <td>Auf der Vogelwiese</td>
+                    <td><span class="badge badge-genre">Polka</span></td>
+                    <td>
+                        <button class="star-button " data-id="15">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </td>
+                </tr><tr>
+                    <td class="number-column">16</td>
+                    <td>Egerländer Traum</td>
+                    <td><span class="badge badge-genre">Polka</span></td>
+                    <td>
+                        <button class="star-button " data-id="16">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </td>
+                </tr><tr>
+                    <td class="number-column">17</td>
+                    <td>Morgengedanken</td>
+                    <td><span class="badge badge-genre">Konzertwerk</span></td>
+                    <td>
+                        <button class="star-button " data-id="17">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </td>
+                </tr><tr>
+                    <td class="number-column">18</td>
+                    <td>Slavonicka-Polka</td>
+                    <td><span class="badge badge-genre">Polka</span></td>
+                    <td>
+                        <button class="star-button " data-id="18">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </td>
+                </tr><tr>
+                    <td class="number-column">19</td>
+                    <td>Von Freund zu Freund</td>
+                    <td><span class="badge badge-genre">Marsch</span></td>
+                    <td>
+                        <button class="star-button " data-id="19">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </td>
+                </tr><tr>
+                    <td class="number-column">20</td>
+                    <td>Böhmisches Liebespärchen</td>
+                    <td><span class="badge badge-genre">Polka</span></td>
+                    <td>
+                        <button class="star-button " data-id="20">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </td>
+                </tr></tbody>
             </table>
+            <div id="noResults" class="no-results" style="display: none;">
+                Keine Ergebnisse gefunden.
+            </div>
+            <div class="pagination" id="pagination"><button class="active">1</button><button>2</button><button>3</button><button>4</button><button>5</button><button>6</button><button>»</button></div>
+        </div>
+
+        <div id="setlist-tab" class="tab-content">
+            <div class="setlist-container">
+                <div class="setlist-header">
+                    <div class="setlist-title">Aktuelle Setlist</div>
+                    <div class="setlist-actions">
+                        <button id="saveSetlist">Setlist speichern</button>
+                        <button id="loadSetlist">Setlist laden</button>
+                        <button id="exportSetlistPDF">Als PDF exportieren</button>
+                        <button id="clearSetlist">Setlist leeren</button>
+                    </div>
+                </div>
+                <div id="setlistItems" class="sortable-list"><div class="empty-setlist">Die Setlist ist leer. Füge Stücke aus der Musiksuche hinzu.</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Setlist Modal -->
+    <div id="saveSetlistModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Setlist speichern</div>
+                <button class="close-modal">×</button>
+            </div>
+            <div class="modal-form">
+                <div class="form-group">
+                    <label for="setlistName">Name der Setlist</label>
+                    <input type="text" id="setlistName" placeholder="z.B. Sommerfest 2023">
+                </div>
+                <div class="form-group">
+                    <label for="setlistDescription">Beschreibung (optional)</label>
+                    <textarea id="setlistDescription" rows="3" placeholder="Beschreibung oder Notizen zur Setlist"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button id="cancelSaveSetlist">Abbrechen</button>
+                    <button id="confirmSaveSetlist">Speichern</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Setlist Modal -->
+    <div id="loadSetlistModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Setlist laden</div>
+                <button class="close-modal">×</button>
+            </div>
+            <div id="savedSetlists">
+                <!-- Saved setlists will be populated here -->
+            </div>
+            <div class="modal-actions">
+                <button id="cancelLoadSetlist">Abbrechen</button>
+            </div>
         </div>
     </div>
 
     <script>
-        const { jsPDF } = window.jspdf;
-
-        const allMusic = [
-            {number: 1, title: "Regimentskinder"},
-            {number: 2, title: "Ein halbes Jahrhundert"},
-            {number: 3, title: "Colonel Bogey March"},
-            {number: 4, title: "Fliegermarsch"},
-            {number: 5, title: "Gablonzer Perlen (Grünes Heft)"},
-            {number: 6, title: "Die Sonne geht auf"},
-            {number: 7, title: "Kaiserin Sissi"},
-            {number: 8, title: "Steeephanspolka"},
-            {number: 9, title: "Zum Städtele hinaus"},
-            {number: 10, title: "Musik verbindet"},
-            {number: 11, title: "Der Rumtreiber"},
-            {number: 12, title: "Stückbrimische Polka"},
-            {number: 13, title: "Jubiläumsklänge"},
-            {number: 14, title: "Kuschel-Polka"},
-            {number: 15, title: "Auf der Vogelwiese"},
-            {number: 16, title: "Egerländer Traum"},
-            {number: 17, title: "Morgengedanken"},
-            {number: 18, title: "Slavonicka-Polka"},
-            {number: 19, title: "Von Freund zu Freund"},
-            {number: 20, title: "Böhmisches Liebespärchen"},
-            {number: 21, title: "Böhmischer Traum"},
-            {number: 22, title: "Böhmische Nacht"},
-            {number: 23, title: "Böhmisch-Ola"},
-            {number: 24, title: "Skoda Lasky"},
-            {number: 25, title: "Willkommen Mädchen"},
-            {number: 26, title: "Hello Mary Lou"},
-            {number: 27, title: "Nessaja"},
-            {number: 28, title: "Spirit Of 89"},
-            {number: 29, title: "Hawaii-Five-0"},
-            {number: 30, title: "Matrimony"},
-            {number: 31, title: "Katharinen Polka"},
-            {number: 32, title: "Attila"},
-            {number: 33, title: "Washington Post"},
-            {number: 34, title: "Böhmisches Gold"},
-            {number: 35, title: "The 80's Collection"},
-            {number: 36, title: "80er KULT(tour)"},
-            {number: 37, title: "Robbie Williams"},
-            {number: 38, title: "Summerlight Rock"},
-            {number: 39, title: "Rock'n Roll forever"},
-            {number: 40, title: "Chattanooga Choo Choo"},
-            {number: 41, title: "Golden Swing Time"},
-            {number: 42, title: "Rock It"},
-            {number: 43, title: "Deep Purple Medley"},
-            {number: 44, title: "Jive Hits"},
-            {number: 45, title: "Jive Hits Vol. 2"},
-            {number: 46, title: "Birnpolka"},
-            {number: 47, title: "Irish Folk"},
-            {number: 48, title: "Wien bleibt Wien"},
-            {number: 49, title: "Coldplay on Stage"},
-            {number: 50, title: "Boney M. Super Hits"},
-            {number: 51, title: "Odie's Spectacular"},
-            {number: 52, title: "Hands Up"},
-            {number: 53, title: "A Tribute to Michael Jackson"},
-            {number: 54, title: "St. Louis Blues"},
-            {number: 55, title: "Happy Spain"},
-            {number: 56, title: "Böhmische Liebe"},
-            {number: 57, title: "Musikantenfeundschaft"},
-            {number: 58, title: "Beschwingt und heiter"},
-            {number: 59, title: "Federweißer Polka"},
-            {number: 60, title: "Hausi-Polka"},
-            {number: 61, title: "In der Weinschenke"},
-            {number: 62, title: "Tief drin im Böhmerwald"},
-            {number: 63, title: "Wir Musikanten"},
-            {number: 64, title: "Florentiner Marsch"},
-            {number: 65, title: "Löhlbacher Musikantenpolka"},
-            {number: 66, title: "Der Faulenzer"},
-            {number: 67, title: "Salternaryr Polka"},
-            {number: 68, title: "180ger Marsch"},
-            {number: 69, title: "Chicago"},
-            {number: 70, title: "Golden Sixties"},
-            {number: 71, title: "Immer wieder Siebziger"},
-            {number: 72, title: "A Rock Selection"},
-            {number: 73, title: "Die tollkühnen Männer..."},
-            {number: 74, title: "Modern Girl"},
-            {number: 75, title: "Späte Liebe"},
-            {number: 76, title: "Träumerei"},
-            {number: 77, title: "Schöne Pragetin"},
-            {number: 78, title: "Blas - Musik in die Welt!"},
-            {number: 79, title: "ABBA Gold"},
-            {number: 80, title: "James Last Golden Hits"},
-            {number: 81, title: "Brauhauspolka"},
-            {number: 82, title: "Heidrun Polka"},
-            {number: 83, title: "Mandy"},
-            {number: 84, title: "Hits der 80er"},
-            {number: 85, title: "Gentilemen of Music"},
-            {number: 86, title: "Hair"},
-            {number: 87, title: "Shred Meister"},
-            {number: 88, title: "Watermelon Man"},
-            {number: 89, title: "Fuchsgraben"},
-            {number: 90, title: "Happy Trombones"},
-            {number: 91, title: "Italo Pop Classics"},
-            {number: 92, title: "Viva Colonia"},
-            {number: 93, title: "Hulapalu"},
-            {number: 94, title: "Nur noch Schuhe an"},
-            {number: 95, title: "Ein Komliment"},
-            {number: 96, title: "Moskau"},
-            {number: 97, title: "Fly Me To The Moon"},
-            {number: 98, title: "Pur Party Hit Mix"},
-            {number: 99, title: "Skandal im Sperberzirk"},
-            {number: 100, title: "Dem Land Tirol die Treue"},
-            {number: 101, title: "Ham kummst"},
-            {number: 102, title: "Cordula Grün"},
-            {number: 103, title: "I'm Gonna Be (500 Miles)"},
-            {number: 104, title: "Narcottic"},
-            {number: 105, title: "Altes Fieber"},
-            {number: 106, title: "Layla"},
-            {number: 107, title: "A Million Dreams"},
-            {number: 108, title: "Happy"},
-            {number: 109, title: "Latin Gold"},
-            {number: 110, title: "Rolling in the Deep"},
-            {number: 111, title: "Smoke on the Water"},
-            {number: 112, title: "Blinding Lights"},
-            {number: 113, title: "Pata Pata"},
-            {number: 114, title: "Malvasia"},
-            {number: 115, title: "Salemonia"},
-            {number: 116, title: "Deutschmeister Regimentsmarsch"},
-            {number: 117, title: "Teppichklopfer-Polka"},
-            {number: 118, title: "Auf Wanderschaft (Rückseite von der Teppichklopfer-Polka)"},
-            {number: 119, title: "Musik im Abendlicht"}
+        // Complete music data with all pieces
+        const musicData = [
+            { id: 1, title: "Regimentskinder", genre: "Marsch" },
+            { id: 2, title: "Ein halbes Jahrhundert", genre: "Marsch" },
+            { id: 3, title: "Colonel Bogey March", genre: "Marsch" },
+            { id: 4, title: "Fliegermarsch", genre: "Marsch" },
+            { id: 5, title: "Gablonzer Perlen (Grünes Heft 17)", genre: "Polka" },
+            { id: 6, title: "Die Sonne geht auf", genre: "Konzertwerk" },
+            { id: 7, title: "Kaiserin Sissi", genre: "Walzer" },
+            { id: 8, title: "Steeephanspolka", genre: "Polka" },
+            { id: 9, title: "Zum Städtele hinaus", genre: "Marsch" },
+            { id: 10, title: "Musik verbindet", genre: "Konzertwerk" },
+            { id: 11, title: "Der Rumtreiber", genre: "Polka" },
+            { id: 12, title: "Stückbrimische Polka", genre: "Polka" },
+            { id: 13, title: "Jubiläumsklänge", genre: "Marsch" },
+            { id: 14, title: "Kuschel-Polka", genre: "Polka" },
+            { id: 15, title: "Auf der Vogelwiese", genre: "Polka" },
+            { id: 16, title: "Egerländer Traum", genre: "Polka" },
+            { id: 17, title: "Morgengedanken", genre: "Konzertwerk" },
+            { id: 18, title: "Slavonicka-Polka", genre: "Polka" },
+            { id: 19, title: "Von Freund zu Freund", genre: "Marsch" },
+            { id: 20, title: "Böhmisches Liebespärchen", genre: "Polka" },
+            { id: 21, title: "Böhmischer Traum", genre: "Polka" },
+            { id: 22, title: "Böhmische Nacht", genre: "Polka" },
+            { id: 23, title: "Böhmisch-Ola", genre: "Polka" },
+            { id: 24, title: "Skoda Lasky", genre: "Polka" },
+            { id: 25, title: "Willkommen Mädchen", genre: "Polka" },
+            { id: 26, title: "Hello Mary Lou", genre: "Pop" },
+            { id: 27, title: "Nessaja", genre: "Pop" },
+            { id: 28, title: "Spirit Of 89", genre: "Rock" },
+            { id: 29, title: "Hawaii-Five-0", genre: "TV-Musik" },
+            { id: 30, title: "Matrimony", genre: "Konzertwerk" },
+            { id: 31, title: "Katharinen Polka", genre: "Polka" },
+            { id: 32, title: "Attila", genre: "Konzertwerk" },
+            { id: 33, title: "Washington Post", genre: "Marsch" },
+            { id: 34, title: "Böhmisches Gold", genre: "Polka" },
+            { id: 35, title: "The 80's Collection", genre: "Pop" },
+            { id: 36, title: "80er KULT(tour)", genre: "Pop" },
+            { id: 37, title: "Robbie Williams", genre: "Pop" },
+            { id: 38, title: "Summerlight Rock", genre: "Rock" },
+            { id: 39, title: "Rock'n Roll forever", genre: "Rock" },
+            { id: 40, title: "Chattanooga Choo Choo", genre: "Swing" },
+            { id: 41, title: "Golden Swing Time", genre: "Swing" },
+            { id: 42, title: "Rock It", genre: "Rock" },
+            { id: 43, title: "Deep Purple Medley", genre: "Rock" },
+            { id: 44, title: "Jive Hits", genre: "Swing" },
+            { id: 45, title: "Jive Hits Vol. 2", genre: "Swing" },
+            { id: 46, title: "Birnpolka", genre: "Polka" },
+            { id: 47, title: "Irish Folk", genre: "Folk" },
+            { id: 48, title: "Wien bleibt Wien", genre: "Walzer" },
+            { id: 49, title: "Coldplay on Stage", genre: "Pop" },
+            { id: 50, title: "Boney M. Super Hits", genre: "Pop" },
+            { id: 51, title: "Odie's Spectacular", genre: "Konzertwerk" },
+            { id: 52, title: "Hands Up", genre: "Pop" },
+            { id: 53, title: "A Tribute to Michael Jackson", genre: "Pop" },
+            { id: 54, title: "St. Louis Blues", genre: "Jazz" },
+            { id: 55, title: "Happy Spain", genre: "Konzertwerk" },
+            { id: 56, title: "Böhmische Liebe", genre: "Polka" },
+            { id: 57, title: "Musikantenfeundschaft", genre: "Polka" },
+            { id: 58, title: "Beschwingt und heiter", genre: "Polka" },
+            { id: 59, title: "Federweißer Polka", genre: "Polka" },
+            { id: 60, title: "Hausi-Polka", genre: "Polka" },
+            { id: 61, title: "In der Weinschenke", genre: "Polka" },
+            { id: 62, title: "Tief drin im Böhmerwald", genre: "Polka" },
+            { id: 63, title: "Wir Musikanten", genre: "Polka" },
+            { id: 64, title: "Florentiner Marsch", genre: "Marsch" },
+            { id: 65, title: "Löhlbacher Musikantenpolka", genre: "Polka" },
+            { id: 66, title: "Der Faulenzer", genre: "Polka" },
+            { id: 67, title: "Salternaryr Polka", genre: "Polka" },
+            { id: 68, title: "180ger Marsch", genre: "Marsch" },
+            { id: 69, title: "Chicago", genre: "Konzertwerk" },
+            { id: 70, title: "Golden Sixties", genre: "Pop" },
+            { id: 71, title: "Immer wieder Siebziger", genre: "Pop" },
+            { id: 72, title: "A Rock Selection", genre: "Rock" },
+            { id: 73, title: "Die tollkühnen Männer...", genre: "Filmmusik" },
+            { id: 74, title: "Modern Girl", genre: "Pop" },
+            { id: 75, title: "Späte Liebe", genre: "Polka" },
+            { id: 76, title: "Träumerei", genre: "Konzertwerk" },
+            { id: 77, title: "Schöne Pragetin", genre: "Polka" },
+            { id: 78, title: "Blas - Musik in die Welt!", genre: "Marsch" },
+            { id: 79, title: "ABBA Gold", genre: "Pop" },
+            { id: 80, title: "James Last Golden Hits", genre: "Pop" },
+            { id: 81, title: "Brauhauspolka", genre: "Polka" },
+            { id: 82, title: "Heidrun Polka", genre: "Polka" },
+            { id: 83, title: "Mandy", genre: "Pop" },
+            { id: 84, title: "Hits der 80er", genre: "Pop" },
+            { id: 85, title: "Gentilemen of Music", genre: "Konzertwerk" },
+            { id: 86, title: "Hair", genre: "Musical" },
+            { id: 87, title: "Shred Meister", genre: "Rock" },
+            { id: 88, title: "Watermelon Man", genre: "Jazz" },
+            { id: 89, title: "Fuchsgraben", genre: "Polka" },
+            { id: 90, title: "Happy Trombones", genre: "Konzertwerk" },
+            { id: 91, title: "Italo Pop Classics", genre: "Pop" },
+            { id: 92, title: "Viva Colonia", genre: "Pop" },
+            { id: 93, title: "Hulapalu", genre: "Pop" },
+            { id: 94, title: "Nur noch Schuhe an", genre: "Pop" },
+            { id: 95, title: "Ein Komliment", genre: "Pop" },
+            { id: 96, title: "Moskau", genre: "Pop" },
+            { id: 97, title: "Fly Me To The Moon", genre: "Jazz" },
+            { id: 98, title: "Pur Party Hit Mix", genre: "Pop" },
+            { id: 99, title: "Skandal im Sperberzirk", genre: "Pop" },
+            { id: 100, title: "Dem Land Tirol die Treue", genre: "Marsch" },
+            { id: 101, title: "Ham kummst", genre: "Pop" },
+            { id: 102, title: "Cordula Grün", genre: "Pop" },
+            { id: 103, title: "I'm Gonna Be (500 Miles)", genre: "Pop" },
+            { id: 104, title: "Narcottic", genre: "Rock" },
+            { id: 105, title: "Altes Fieber", genre: "Pop" },
+            { id: 106, title: "Layla", genre: "Pop" },
+            { id: 107, title: "A Million Dreams", genre: "Musical" },
+            { id: 108, title: "Happy", genre: "Pop" },
+            { id: 109, title: "Latin Gold", genre: "Latin" },
+            { id: 110, title: "Rolling in the Deep", genre: "Pop" },
+            { id: 111, title: "Smoke on the Water", genre: "Rock" },
+            { id: 112, title: "Blinding Lights", genre: "Pop" },
+            { id: 113, title: "Pata Pata", genre: "World" },
+            { id: 114, title: "Malvasia", genre: "Konzertwerk" },
+            { id: 115, title: "Salemonia", genre: "Konzertwerk" },
+            { id: 116, title: "Deutschmeister Regimentsmarsch", genre: "Marsch" },
+            { id: 117, title: "Teppichklopfer-Polka", genre: "Polka" },
+            { id: 118, title: "Auf Wanderschaft", genre: "Marsch" },
+            { id: 119, title: "Musik im Abendlicht", genre: "Konzertwerk" }
         ];
 
-        let currentSortColumn = 0;
-        let currentData = [...allMusic];
-        let setlist = JSON.parse(localStorage.getItem('setlist')) || [];
-        let setlistName = localStorage.getItem('setlistName') || '';
-        let dragGhost = null;
-        let draggedRow = null;
-        let draggedRowIndex = -1;
+        // Current setlist
+        let currentSetlist = [];
+        
+        // Pagination variables
+        let currentPage = 1;
+        const itemsPerPage = 20;
+        let filteredData = [...musicData];
 
-        document.getElementById('searchInput').addEventListener('input', function(e) {
-            document.querySelector('.clear-search').style.display = this.value.trim() ? 'block' : 'none';
-            filterResults(this.value);
+        // DOM Elements
+        const searchInput = document.getElementById('searchInput');
+        const clearSearchBtn = document.getElementById('clearSearch');
+        const resultsBody = document.getElementById('resultsBody');
+        const noResults = document.getElementById('noResults');
+        const exportPDFBtn = document.getElementById('exportPDF');
+        const resetFiltersBtn = document.getElementById('resetFilters');
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const setlistItems = document.getElementById('setlistItems');
+        const saveSetlistBtn = document.getElementById('saveSetlist');
+        const loadSetlistBtn = document.getElementById('loadSetlist');
+        const exportSetlistPDFBtn = document.getElementById('exportSetlistPDF');
+        const clearSetlistBtn = document.getElementById('clearSetlist');
+        const saveSetlistModal = document.getElementById('saveSetlistModal');
+        const loadSetlistModal = document.getElementById('loadSetlistModal');
+        const confirmSaveSetlistBtn = document.getElementById('confirmSaveSetlist');
+        const cancelSaveSetlistBtn = document.getElementById('cancelSaveSetlist');
+        const cancelLoadSetlistBtn = document.getElementById('cancelLoadSetlist');
+        const setlistNameInput = document.getElementById('setlistName');
+        const setlistDescriptionInput = document.getElementById('setlistDescription');
+        const savedSetlistsContainer = document.getElementById('savedSetlists');
+        const paginationContainer = document.getElementById('pagination');
+        const genreFilter = document.getElementById('genreFilter');
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            populateGenreFilter();
+            displayMusicData(getPaginatedData());
+            setupEventListeners();
+            updateSetlistDisplay();
+            updatePagination();
         });
 
-        function populateTable(data) {
-            const tbody = document.getElementById('resultsBody');
-            tbody.innerHTML = '';
+        // Populate genre filter dropdown
+        function populateGenreFilter() {
+            const genres = [...new Set(musicData.map(item => item.genre))].sort();
             
-            if (data.length === 0) {
-                document.getElementById('noResults').style.display = 'block';
+            genres.forEach(genre => {
+                const option = document.createElement('option');
+                option.value = genre;
+                option.textContent = genre;
+                genreFilter.appendChild(option);
+            });
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Search functionality
+            searchInput.addEventListener('input', handleSearch);
+            clearSearchBtn.addEventListener('click', clearSearch);
+            
+            // Table sorting
+            document.querySelectorAll('.results-table th[data-sort]').forEach(th => {
+                th.addEventListener('click', () => sortTable(th.dataset.sort));
+            });
+            
+            // Export functionality
+            exportPDFBtn.addEventListener('click', exportToPDF);
+            resetFiltersBtn.addEventListener('click', resetFilters);
+            
+            // Tab switching
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+            });
+            
+            // Setlist actions
+            saveSetlistBtn.addEventListener('click', openSaveSetlistModal);
+            loadSetlistBtn.addEventListener('click', openLoadSetlistModal);
+            exportSetlistPDFBtn.addEventListener('click', exportSetlistToPDF);
+            clearSetlistBtn.addEventListener('click', confirmClearSetlist);
+            
+            // Modal actions
+            document.querySelectorAll('.close-modal').forEach(btn => {
+                btn.addEventListener('click', closeAllModals);
+            });
+            confirmSaveSetlistBtn.addEventListener('click', saveCurrentSetlist);
+            cancelSaveSetlistBtn.addEventListener('click', closeAllModals);
+            cancelLoadSetlistBtn.addEventListener('click', closeAllModals);
+            
+            // Filter actions
+            genreFilter.addEventListener('change', applyFilters);
+        }
+
+        // Get paginated data
+        function getPaginatedData() {
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            return filteredData.slice(startIndex, endIndex);
+        }
+
+        // Update pagination controls
+        function updatePagination() {
+            const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+            paginationContainer.innerHTML = '';
+            
+            if (totalPages <= 1) {
                 return;
             }
             
-            document.getElementById('noResults').style.display = 'none';
+            // Previous button
+            if (currentPage > 1) {
+                const prevButton = document.createElement('button');
+                prevButton.innerHTML = '&laquo;';
+                prevButton.addEventListener('click', () => {
+                    currentPage--;
+                    displayMusicData(getPaginatedData());
+                    updatePagination();
+                });
+                paginationContainer.appendChild(prevButton);
+            }
+            
+            // Page buttons
+            for (let i = 1; i <= totalPages; i++) {
+                const pageButton = document.createElement('button');
+                pageButton.textContent = i;
+                
+                if (i === currentPage) {
+                    pageButton.classList.add('active');
+                }
+                
+                pageButton.addEventListener('click', () => {
+                    currentPage = i;
+                    displayMusicData(getPaginatedData());
+                    updatePagination();
+                });
+                
+                paginationContainer.appendChild(pageButton);
+            }
+            
+            // Next button
+            if (currentPage < totalPages) {
+                const nextButton = document.createElement('button');
+                nextButton.innerHTML = '&raquo;';
+                nextButton.addEventListener('click', () => {
+                    currentPage++;
+                    displayMusicData(getPaginatedData());
+                    updatePagination();
+                });
+                paginationContainer.appendChild(nextButton);
+            }
+        }
+
+        // Display music data in the table
+        function displayMusicData(data) {
+            resultsBody.innerHTML = '';
+            
+            if (data.length === 0) {
+                noResults.style.display = 'block';
+                return;
+            }
+            
+            noResults.style.display = 'none';
             
             data.forEach(item => {
                 const row = document.createElement('tr');
-                const inSetlist = setlist.some(i => typeof i === 'number' && i === item.number);
+                
+                // Create genre badge
+                const genreBadge = `<span class="badge badge-genre">${item.genre}</span>`;
+                
+                // Check if item is already in setlist
+                const isInSetlist = currentSetlist.some(setlistItem => setlistItem.id === item.id);
+                
                 row.innerHTML = `
-                    <td>${item.number}</td>
+                    <td class="number-column">${item.id}</td>
                     <td>${item.title}</td>
-                    <td><span class="add-to-setlist ${inSetlist ? 'in-setlist' : ''}" onclick="toggleSetlist(${item.number}, this)">${inSetlist ? '★' : '☆'}</span></td>
+                    <td>${genreBadge}</td>
+                    <td>
+                        <button class="star-button ${isInSetlist ? 'active' : ''}" data-id="${item.id}">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </td>
                 `;
-                tbody.appendChild(row);
+                
+                resultsBody.appendChild(row);
             });
             
-            currentData = [...data];
+            // Add event listeners to star buttons
+            document.querySelectorAll('.star-button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = parseInt(btn.dataset.id);
+                    if (btn.classList.contains('active')) {
+                        // Remove from setlist
+                        removeFromSetlistById(id);
+                        btn.classList.remove('active');
+                    } else {
+                        // Add to setlist
+                        addToSetlist(id);
+                        btn.classList.add('active');
+                    }
+                });
+            });
         }
 
-        function populateSetlist() {
-            const tbody = document.getElementById('setlistBody');
-            tbody.innerHTML = '';
-            
-            if (setlist.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Keine Stücke in der Setlist</td></tr>';
-                return;
-            }
+        // Handle search input
+        function handleSearch() {
+            applyFilters();
+        }
 
-            let partCount = 1;
-            setlist.forEach((item, index) => {
-                if (item === 'DIVIDER') {
-                    partCount++;
-                    const row = document.createElement('tr');
-                    row.className = 'divider-row';
-                    row.innerHTML = `
-                        <td colspan="4">--- TEIL ${partCount} ---</td>
-                    `;
-                    row.onclick = function() {
-                        if (confirm('Teilung entfernen?')) {
-                            setlist.splice(index, 1);
-                            localStorage.setItem('setlist', JSON.stringify(setlist));
-                            populateSetlist();
-                        }
-                    };
-                    tbody.appendChild(row);
+        // Apply all filters
+        function applyFilters() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const selectedGenre = genreFilter.value;
+            
+            if (searchTerm) {
+                clearSearchBtn.style.display = 'block';
+            } else {
+                clearSearchBtn.style.display = 'none';
+            }
+            
+            filteredData = musicData.filter(item => {
+                const matchesSearch = 
+                    item.title.toLowerCase().includes(searchTerm) ||
+                    item.genre.toLowerCase().includes(searchTerm) ||
+                    item.id.toString().includes(searchTerm); // Search by number
+                
+                const matchesGenre = selectedGenre === '' || item.genre === selectedGenre;
+                
+                return matchesSearch && matchesGenre;
+            });
+            
+            currentPage = 1;
+            displayMusicData(getPaginatedData());
+            updatePagination();
+        }
+
+        // Clear search
+        function clearSearch() {
+            searchInput.value = '';
+            clearSearchBtn.style.display = 'none';
+            applyFilters();
+        }
+
+        // Sort table by column
+        function sortTable(column) {
+            filteredData.sort((a, b) => {
+                if (a[column] < b[column]) return -1;
+                if (a[column] > b[column]) return 1;
+                return 0;
+            });
+            
+            displayMusicData(getPaginatedData());
+        }
+
+        // Export table to PDF
+        function exportToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            doc.text('MV Endersbach Musikarchiv', 14, 15);
+            
+            const tableData = [];
+            musicData.forEach(item => {
+                tableData.push([item.id, item.title, item.genre]);
+            });
+            
+            doc.autoTable({
+                head: [['Nr.', 'Titel', 'Genre']],
+                body: tableData,
+                startY: 20
+            });
+            
+            doc.save('musikarchiv.pdf');
+        }
+
+        // Reset filters
+        function resetFilters() {
+            clearSearch();
+            genreFilter.value = '';
+            filteredData = [...musicData];
+            currentPage = 1;
+            displayMusicData(getPaginatedData());
+            updatePagination();
+        }
+
+        // Switch between tabs
+        function switchTab(tabId) {
+            tabs.forEach(tab => {
+                if (tab.dataset.tab === tabId) {
+                    tab.classList.add('active');
                 } else {
-                    const musicItem = allMusic.find(i => i.number === item);
-                    if (musicItem) {
-                        const row = document.createElement('tr');
-                        row.className = 'setlist-row';
-                        row.dataset.number = musicItem.number;
-                        row.innerHTML = `
-                            <td><span class="drag-handle">≡</span></td>
-                            <td>${musicItem.number}</td>
-                            <td>${musicItem.title}</td>
-                            <td><span class="remove-from-setlist">✕</span></td>
-                        `;
-                        tbody.appendChild(row);
-                    }
+                    tab.classList.remove('active');
                 }
             });
+            
+            tabContents.forEach(content => {
+                if (content.id === `${tabId}-tab`) {
+                    content.classList.add('active');
+                } else {
+                    content.classList.remove('active');
+                }
+            });
+        }
 
+        // Add item to setlist
+        function addToSetlist(id) {
+            const item = musicData.find(item => item.id === id);
+            
+            if (item && !currentSetlist.some(setlistItem => setlistItem.id === id)) {
+                currentSetlist.push({...item, setlistId: Date.now()});
+                updateSetlistDisplay();
+                
+                // Show a brief notification
+                const notification = document.createElement('div');
+                notification.textContent = `"${item.title}" zur Setlist hinzugefügt`;
+                notification.style.position = 'fixed';
+                notification.style.bottom = '20px';
+                notification.style.right = '20px';
+                notification.style.backgroundColor = 'var(--primary-color)';
+                notification.style.color = 'white';
+                notification.style.padding = '10px 20px';
+                notification.style.borderRadius = '5px';
+                notification.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+                notification.style.zIndex = '1000';
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.style.opacity = '0';
+                    notification.style.transition = 'opacity 0.5s';
+                    setTimeout(() => {
+                        document.body.removeChild(notification);
+                    }, 500);
+                }, 2000);
+            }
+        }
+
+        // Update setlist display with drag and drop functionality
+        function updateSetlistDisplay() {
+            if (currentSetlist.length === 0) {
+                setlistItems.innerHTML = '<div class="empty-setlist">Die Setlist ist leer. Füge Stücke aus der Musiksuche hinzu.</div>';
+                return;
+            }
+            
+            setlistItems.innerHTML = '';
+            
+            currentSetlist.forEach((item, index) => {
+                const setlistItem = document.createElement('div');
+                setlistItem.className = 'setlist-item';
+                setlistItem.draggable = true;
+                setlistItem.dataset.setlistId = item.setlistId;
+                
+                setlistItem.innerHTML = `
+                    <div class="setlist-item-info">
+                        <i class="fas fa-grip-lines setlist-drag-handle"></i>
+                        <span class="setlist-item-title">${index + 1}. ${item.title}</span>
+                        <div class="setlist-item-composer">Nr. ${item.id} • ${item.genre}</div>
+                    </div>
+                    <div class="setlist-item-actions">
+                        <button class="remove-from-setlist" data-setlist-id="${item.setlistId}">
+                            <i class="fas fa-times"></i> Entfernen
+                        </button>
+                    </div>
+                `;
+                
+                setlistItems.appendChild(setlistItem);
+            });
+            
+            // Add event listeners to setlist item buttons
+            document.querySelectorAll('.remove-from-setlist').forEach(btn => {
+                btn.addEventListener('click', () => removeFromSetlist(parseInt(btn.dataset.setlistId)));
+            });
+            
+            // Setup drag and drop functionality
             setupDragAndDrop();
         }
 
+        // Setup drag and drop for setlist items
         function setupDragAndDrop() {
-            const tbody = document.getElementById('setlistBody');
-            const rows = tbody.querySelectorAll('tr');
+            const setlistItemElements = document.querySelectorAll('.setlist-item');
             
-            rows.forEach(row => {
-                if (!row.classList.contains('divider-row')) {
-                    const handle = row.querySelector('.drag-handle');
-                    
-                    handle.addEventListener('mousedown', function(e) {
-                        startDrag(row, e);
-                    });
-                }
+            setlistItemElements.forEach(item => {
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragover', handleDragOver);
+                item.addEventListener('dragenter', handleDragEnter);
+                item.addEventListener('dragleave', handleDragLeave);
+                item.addEventListener('drop', handleDrop);
+                item.addEventListener('dragend', handleDragEnd);
             });
-            
-            document.addEventListener('mousemove', handleDrag);
-            document.addEventListener('mouseup', endDrag);
         }
 
-        function startDrag(row, e) {
-            draggedRow = row;
-            draggedRowIndex = Array.from(row.parentNode.children).indexOf(row);
+        let draggedItem = null;
+
+        function handleDragStart(e) {
+            draggedItem = this;
+            this.classList.add('dragging');
             
-            dragGhost = row.cloneNode(true);
-            dragGhost.classList.add('drag-ghost');
-            dragGhost.style.width = `${row.offsetWidth}px`;
+            // Set data for drag operation
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', this.dataset.setlistId);
             
-            const rect = row.getBoundingClientRect();
-            dragGhost.style.left = `${rect.left}px`;
-            dragGhost.style.top = `${rect.top}px`;
-            
-            document.body.appendChild(dragGhost);
-            
-            row.classList.add('dragging');
-            row.style.opacity = '0.5';
-            
-            dragGhost.style.transform = `translate(${e.clientX - rect.left - rect.width/2}px, ${e.clientY - rect.top - rect.height/2}px)`;
-            dragGhost.style.pointerEvents = 'none';
-            
-            e.preventDefault();
+            // For Firefox
+            e.dataTransfer.setDragImage(this, 20, 20);
         }
 
-        function handleDrag(e) {
-            if (!dragGhost) return;
+        function handleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault(); // Necessary to allow drop
+            }
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        }
+
+        function handleDragEnter(e) {
+            this.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            this.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.stopPropagation(); // Stops the browser from redirecting
             
-            dragGhost.style.transform = `translate(${e.clientX - dragGhost.offsetWidth/2}px, ${e.clientY - dragGhost.offsetHeight/2}px)`;
-            
-            const tbody = document.getElementById('setlistBody');
-            const rows = Array.from(tbody.querySelectorAll('tr:not(.dragging)'));
-            const ghostRect = dragGhost.getBoundingClientRect();
-            const ghostCenterY = ghostRect.top + ghostRect.height / 2;
-            
-            let closestRow = null;
-            let closestDistance = Infinity;
-            let insertBefore = false;
-            
-            rows.forEach(row => {
-                const rect = row.getBoundingClientRect();
-                const rowCenterY = rect.top + rect.height / 2;
-                const distance = Math.abs(ghostCenterY - rowCenterY);
+            if (draggedItem !== this) {
+                // Get the dragged and target setlist IDs
+                const draggedSetlistId = parseInt(draggedItem.dataset.setlistId);
+                const targetSetlistId = parseInt(this.dataset.setlistId);
                 
-                if (distance < closestDistance) {
-                    closestDistance = distance;
-                    closestRow = row;
-                    insertBefore = ghostCenterY < rowCenterY;
-                }
+                // Find their positions in the currentSetlist array
+                const draggedIndex = currentSetlist.findIndex(item => item.setlistId === draggedSetlistId);
+                const targetIndex = currentSetlist.findIndex(item => item.setlistId === targetSetlistId);
+                
+                // Reorder the array
+                const [movedItem] = currentSetlist.splice(draggedIndex, 1);
+                currentSetlist.splice(targetIndex, 0, movedItem);
+                
+                // Update the display
+                updateSetlistDisplay();
+            }
+            
+            this.classList.remove('drag-over');
+            return false;
+        }
+
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+            
+            // Clear all drag-over classes
+            document.querySelectorAll('.setlist-item').forEach(item => {
+                item.classList.remove('drag-over');
             });
             
-            if (closestRow && closestRow !== draggedRow) {
-                if (insertBefore && closestRow.previousElementSibling !== draggedRow) {
-                    tbody.insertBefore(draggedRow, closestRow);
-                } else if (!insertBefore && closestRow.nextElementSibling !== draggedRow) {
-                    tbody.insertBefore(draggedRow, closestRow.nextElementSibling);
+            draggedItem = null;
+        }
+
+        // Remove item from setlist
+        function removeFromSetlist(setlistId) {
+            currentSetlist = currentSetlist.filter(item => item.setlistId !== setlistId);
+            updateSetlistDisplay();
+            
+            // Update star buttons in the search results
+            const removedItem = musicData.find(item => 
+                currentSetlist.some(setlistItem => setlistItem.id === item.id) === false
+            );
+            
+            if (removedItem) {
+                const starButton = document.querySelector(`.star-button[data-id="${removedItem.id}"]`);
+                if (starButton) {
+                    starButton.classList.remove('active');
                 }
             }
         }
 
-        function endDrag() {
-            if (!dragGhost) return;
+        // Remove item from setlist by music ID
+        function removeFromSetlistById(id) {
+            currentSetlist = currentSetlist.filter(item => item.id !== id);
+            updateSetlistDisplay();
+        }
+
+        // Export setlist to PDF
+        function exportSetlistToPDF() {
+            if (currentSetlist.length === 0) {
+                alert('Die Setlist ist leer.');
+                return;
+            }
             
-            dragGhost.remove();
-            dragGhost = null;
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
             
-            if (draggedRow) {
-                draggedRow.classList.remove('dragging');
-                draggedRow.style.opacity = '1';
+            doc.text('MV Endersbach - Setlist', 14, 15);
+            
+            const tableData = [];
+            currentSetlist.forEach((item, index) => {
+                tableData.push([index + 1, item.title, item.genre, item.id]);
+            });
+            
+            doc.autoTable({
+                head: [['#', 'Titel', 'Genre', 'Archiv-Nr.']],
+                body: tableData,
+                startY: 20
+            });
+            
+            doc.save('setlist.pdf');
+        }
+
+        // Confirm clear setlist
+        function confirmClearSetlist() {
+            if (currentSetlist.length === 0) {
+                return;
+            }
+            
+            if (confirm('Möchtest du wirklich die gesamte Setlist leeren?')) {
+                currentSetlist = [];
+                updateSetlistDisplay();
                 
-                const newOrder = [];
-                const tbody = document.getElementById('setlistBody');
-                tbody.querySelectorAll('tr').forEach(row => {
-                    if (row.classList.contains('divider-row')) {
-                        newOrder.push('DIVIDER');
-                    } else if (row.dataset.number) {
-                        newOrder.push(parseInt(row.dataset.number));
+                // Update all star buttons
+                document.querySelectorAll('.star-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+            }
+        }
+
+        // Open save setlist modal
+        function openSaveSetlistModal() {
+            if (currentSetlist.length === 0) {
+                alert('Die Setlist ist leer.');
+                return;
+            }
+            
+            setlistNameInput.value = '';
+            setlistDescriptionInput.value = '';
+            saveSetlistModal.style.display = 'flex';
+        }
+
+        // Open load setlist modal
+        function openLoadSetlistModal() {
+            // Get saved setlists from localStorage
+            const savedSetlists = JSON.parse(localStorage.getItem('savedSetlists')) || [];
+            
+            if (savedSetlists.length === 0) {
+                savedSetlistsContainer.innerHTML = '<div class="empty-setlist">Keine gespeicherten Setlists vorhanden.</div>';
+            } else {
+                savedSetlistsContainer.innerHTML = '';
+                
+                savedSetlists.forEach((setlist, index) => {
+                    const setlistElement = document.createElement('div');
+                    setlistElement.className = 'setlist-item';
+                    
+                    const itemCount = setlist.items.length;
+                    const date = new Date(setlist.savedAt).toLocaleDateString();
+                    
+                    setlistElement.innerHTML = `
+                        <div class="setlist-item-info">
+                            <div class="setlist-item-title">${setlist.name}</div>
+                            <div class="setlist-item-composer">${itemCount} Stücke • Gespeichert am ${date}</div>
+                            ${setlist.description ? `<div class="setlist-item-description">${setlist.description}</div>` : ''}
+                        </div>
+                        <div class="setlist-item-actions">
+                            <button class="load-setlist-btn" data-index="${index}">Laden</button>
+                            <button class="remove-setlist-btn" data-index="${index}">Löschen</button>
+                        </div>
+                    `;
+                    
+                    savedSetlistsContainer.appendChild(setlistElement);
+                });
+                
+                // Add event listeners to setlist buttons
+                document.querySelectorAll('.load-setlist-btn').forEach(btn => {
+                    btn.addEventListener('click', () => loadSetlist(parseInt(btn.dataset.index)));
+                });
+                
+                document.querySelectorAll('.remove-setlist-btn').forEach(btn => {
+                    btn.addEventListener('click', () => removeSetlist(parseInt(btn.dataset.index)));
+                });
+            }
+            
+            loadSetlistModal.style.display = 'flex';
+        }
+
+        // Close all modals
+        function closeAllModals() {
+            saveSetlistModal.style.display = 'none';
+            loadSetlistModal.style.display = 'none';
+        }
+
+        // Save current setlist
+        function saveCurrentSetlist() {
+            const name = setlistNameInput.value.trim();
+            
+            if (!name) {
+                alert('Bitte gib einen Namen für die Setlist ein.');
+                return;
+            }
+            
+            const description = setlistDescriptionInput.value.trim();
+            
+            // Get saved setlists from localStorage
+            const savedSetlists = JSON.parse(localStorage.getItem('savedSetlists')) || [];
+            
+            // Add new setlist
+            savedSetlists.push({
+                name,
+                description,
+                items: currentSetlist,
+                savedAt: Date.now()
+            });
+            
+            // Save to localStorage
+            localStorage.setItem('savedSetlists', JSON.stringify(savedSetlists));
+            
+            closeAllModals();
+            
+            // Show confirmation
+            alert(`Setlist "${name}" wurde gespeichert.`);
+        }
+
+        // Load setlist
+        function loadSetlist(index) {
+            // Get saved setlists from localStorage
+            const savedSetlists = JSON.parse(localStorage.getItem('savedSetlists')) || [];
+            
+            if (index >= 0 && index < savedSetlists.length) {
+                if (currentSetlist.length > 0) {
+                    if (!confirm('Möchtest du die aktuelle Setlist überschreiben?')) {
+                        return;
+                    }
+                }
+                
+                currentSetlist = savedSetlists[index].items;
+                updateSetlistDisplay();
+                closeAllModals();
+                
+                // Update star buttons
+                document.querySelectorAll('.star-button').forEach(btn => {
+                    const id = parseInt(btn.dataset.id);
+                    if (currentSetlist.some(item => item.id === id)) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
                     }
                 });
                 
-                setlist = newOrder;
-                localStorage.setItem('setlist', JSON.stringify(setlist));
-                
-                draggedRow = null;
-                draggedRowIndex = -1;
+                // Show confirmation
+                alert(`Setlist "${savedSetlists[index].name}" wurde geladen.`);
             }
         }
 
-        function toggleSetlist(number, element) {
-            const index = setlist.findIndex(i => i === number);
-            if (index === -1) {
-                setlist.push(number);
-                element.classList.add('in-setlist');
-                element.textContent = '★';
-            } else {
-                setlist.splice(index, 1);
-                element.classList.remove('in-setlist');
-                element.textContent = '☆';
-            }
-            localStorage.setItem('setlist', JSON.stringify(setlist));
-        }
-
-        document.addEventListener('click', function(e) {
-            if (e.target.classList.contains('remove-from-setlist')) {
-                const row = e.target.closest('tr');
-                const number = parseInt(row.dataset.number);
-                const index = setlist.findIndex(i => i === number);
-                if (index !== -1) {
-                    setlist.splice(index, 1);
-                    localStorage.setItem('setlist', JSON.stringify(setlist));
-                    populateSetlist();
-                }
-            }
-        });
-
-        function filterResults(searchTerm) {
-            const term = searchTerm.toLowerCase();
-            const results = allMusic.filter(item => 
-                item.title.toLowerCase().includes(term) ||
-                item.number.toString().includes(term)
-            );
-            populateTable(results);
-        }
-
-        function sortTable(column) {
-            currentSortColumn = column;
+        // Remove setlist
+        function removeSetlist(index) {
+            // Get saved setlists from localStorage
+            const savedSetlists = JSON.parse(localStorage.getItem('savedSetlists')) || [];
             
-            allMusic.sort((a, b) => {
-                const valA = column === 0 ? a.number : a.title;
-                const valB = column === 0 ? b.number : b.title;
-                return valA > valB ? 1 : -1;
-            });
-
-            populateTable(allMusic);
-        }
-
-        function resetSearch() {
-            document.getElementById('searchInput').value = '';
-            document.querySelector('.clear-search').style.display = 'none';
-            populateTable(allMusic);
-        }
-
-        function showSetlist() {
-            document.getElementById('searchHeader').style.display = 'none';
-            document.getElementById('mainTable').style.display = 'none';
-            document.getElementById('setlistView').style.display = 'block';
-            document.getElementById('setlistName').value = setlistName;
-            populateSetlist();
-        }
-
-        function backToMainView() {
-            setlistName = document.getElementById('setlistName').value;
-            localStorage.setItem('setlistName', setlistName);
-            
-            document.getElementById('searchHeader').style.display = 'block';
-            document.getElementById('mainTable').style.display = 'table';
-            document.getElementById('setlistView').style.display = 'none';
-            resetSearch();
-        }
-
-        function addDivider() {
-            const musicItems = setlist.filter(item => typeof item === 'number');
-            
-            if (musicItems.length < 2) {
-                alert("Mindestens 2 Stücke benötigt für eine Teilung");
-                return;
-            }
-            
-            if (setlist.includes('DIVIDER')) {
-                setlist.push('DIVIDER');
-            } else {
-                const insertAt = Math.floor(musicItems.length / 2);
-                let count = 0;
-                for (let i = 0; i < setlist.length; i++) {
-                    if (typeof setlist[i] === 'number') {
-                        count++;
-                        if (count > insertAt) {
-                            setlist.splice(i, 0, 'DIVIDER');
-                            break;
-                        }
-                    }
-                }
-            }
-            
-            localStorage.setItem('setlist', JSON.stringify(setlist));
-            populateSetlist();
-        }
-
-        function generatePDF() {
-            if (setlist.length === 0) {
-                alert("Die Setlist ist leer");
-                return;
-            }
-
-            const doc = new jsPDF();
-            const name = document.getElementById('setlistName').value || 'Setlist';
-            setlistName = name;
-            localStorage.setItem('setlistName', name);
-            
-            doc.setFontSize(20);
-            doc.setTextColor(109, 26, 54);
-            doc.text(`MV Endersbach - ${name}`, 105, 20, { align: 'center' });
-            
-            doc.setFontSize(12);
-            doc.setTextColor(100, 100, 100);
-            const today = new Date();
-            doc.text(`Erstellt am: ${today.toLocaleDateString('de-DE')}`, 105, 30, { align: 'center' });
-            
-            const columns = [
-                { header: 'Nr.', dataKey: 'index' },
-                { header: 'Nummer', dataKey: 'number' },
-                { header: 'Titel', dataKey: 'title' }
-            ];
-            
-            const rows = [];
-            let part = 1;
-            
-            setlist.forEach((item, index) => {
-                if (item === 'DIVIDER') {
-                    part++;
-                } else {
-                    const musicItem = allMusic.find(i => i.number === item);
-                    if (musicItem) {
-                        rows.push({
-                            index: index + 1,
-                            number: musicItem.number,
-                            title: musicItem.title,
-                            part: part
-                        });
-                    }
-                }
-            });
-            
-            let currentPart = 1;
-            let partRows = rows.filter(row => row.part === currentPart);
-            
-            doc.autoTable({
-                startY: 40,
-                head: [columns.map(col => col.header)],
-                body: partRows.map(row => [row.index, row.number, row.title]),
-                headStyles: {
-                    fillColor: [109, 26, 54],
-                    textColor: 255,
-                    fontStyle: 'bold'
-                },
-                margin: { top: 40 },
-                styles: {
-                    fontSize: 10,
-                    cellPadding: 5
-                },
-                columnStyles: {
-                    0: { cellWidth: 15 },
-                    1: { cellWidth: 25 }
-                }
-            });
-            
-            for (let p = 2; p <= part; p++) {
-                partRows = rows.filter(row => row.part === p);
-                if (partRows.length > 0) {
-                    doc.setFontSize(14);
-                    doc.setTextColor(109, 26, 54);
-                    doc.text(`Teil ${p}`, 105, doc.lastAutoTable.finalY + 15, { align: 'center' });
+            if (index >= 0 && index < savedSetlists.length) {
+                if (confirm(`Möchtest du die Setlist "${savedSetlists[index].name}" wirklich löschen?`)) {
+                    const removedSetlist = savedSetlists.splice(index, 1)[0];
                     
-                    doc.autoTable({
-                        startY: doc.lastAutoTable.finalY + 20,
-                        head: [columns.map(col => col.header)],
-                        body: partRows.map(row => [row.index, row.number, row.title]),
-                        headStyles: {
-                            fillColor: [109, 26, 54],
-                            textColor: 255,
-                            fontStyle: 'bold'
-                        },
-                        styles: {
-                            fontSize: 10,
-                            cellPadding: 5
-                        },
-                        columnStyles: {
-                            0: { cellWidth: 15 },
-                            1: { cellWidth: 25 }
-                        }
-                    });
+                    // Save updated setlists to localStorage
+                    localStorage.setItem('savedSetlists', JSON.stringify(savedSetlists));
+                    
+                    // Refresh the modal content
+                    openLoadSetlistModal();
+                    
+                    // Show confirmation
+                    alert(`Setlist "${removedSetlist.name}" wurde gelöscht.`);
                 }
             }
-            
-            doc.setFontSize(10);
-            doc.setTextColor(100, 100, 100);
-            doc.text('© Musikverein Endersbach', 105, doc.internal.pageSize.height - 10, { align: 'center' });
-            
-            doc.save(`${name.replace(/[^a-z0-9]/gi, '_')}_${today.toISOString().split('T')[0]}.pdf`);
         }
-
-        sortTable(0);
     </script>
-</body>
-</html>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'941ac645659992a8',t:'MTc0NzU2NTIyNi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><iframe height="1" width="1" style="position: absolute; top: 0px; left: 0px; border: none; visibility: hidden;"></iframe>
+
+</body></html>
