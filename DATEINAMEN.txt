@@ -1,0 +1,25 @@
+MV Endersbach – Dateinamen
+===========================
+
+Alle Dateien kommen ohne Unterordner in dasselbe GitHub-Repository:
+
+- index.html
+- manifest.webmanifest
+- service-worker.js
+- logo.svg
+- happy-birthday.svg
+- ein-prosit.svg
+- icon-180.png
+- icon-192.png
+- icon-512.png
+
+Austausch:
+- Eigenes Logo als "logo.svg" hochladen.
+- Happy-Birthday-Noten als "happy-birthday.svg" hochladen.
+- Ein-Prosit-Noten als "ein-prosit.svg" hochladen.
+- Die Dateinamen müssen gleich bleiben.
+
+Wichtig nach Änderungen:
+- In service-worker.js bei CACHE_NAME die Versionsnummer erhöhen,
+  z. B. von mv-endersbach-v1 auf mv-endersbach-v2.
+  Dadurch lädt die installierte Web-App die neuen Dateien zuverlässig.

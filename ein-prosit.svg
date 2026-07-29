@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1400">
+  <rect width="900" height="1400" fill="white"/>
+  <rect x="35" y="35" width="830" height="1330" rx="28" fill="none" stroke="#6d1a36" stroke-width="6"/>
+  <text x="450" y="170" text-anchor="middle" font-family="Arial, sans-serif" font-size="64" font-weight="700" fill="#6d1a36">Ein Prosit</text>
+  <text x="450" y="270" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" fill="#5f5559">Platzhalter</text>
+  <text x="450" y="700" text-anchor="middle" font-family="Arial, sans-serif" font-size="35" fill="#5f5559">
+    Diese Datei in GitHub ersetzen.
+  </text>
+  <text x="450" y="760" text-anchor="middle" font-family="Arial, sans-serif" font-size="30" fill="#5f5559">
+    Dateiname unverändert lassen:
+  </text>
+  <text x="450" y="825" text-anchor="middle" font-family="monospace" font-size="32" font-weight="700" fill="#6d1a36">ein-prosit.svg</text>
+</svg>

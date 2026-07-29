@@ -1,1576 +1,673 @@
 <!DOCTYPE html>
-<html lang="de"><head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MV Endersbach Musikarchiv</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --primary-color: #6d1a36;
-            --secondary-color: #8c2d4d;
-            --background: #f8f9fa;
-            --star-color: #ffc107;
-            --button-text: white;
-            --remove-color: var(--secondary-color);
-        }
-
-        body {
-            font-family: 'Arial', sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: var(--background);
-        }
-
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-        }
-
-        .header-logo {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .header-logo svg {
-            width: 40px;
-            height: 40px;
-            fill: none;
-            stroke: var(--primary-color);
-            stroke-width: 1.5;
-        }
-
-        .search-container {
-            position: relative;
-            width: 100%;
-            margin-bottom: 15px;
-        }
-
-        #searchInput {
-            width: 100%;
-            padding: 12px 35px 12px 20px;
-            font-size: 1.1rem;
-            border: 2px solid #ddd;
-            border-radius: 25px;
-            transition: all 0.3s;
-            box-sizing: border-box;
-        }
-
-        #searchInput:focus {
-            border-color: var(--primary-color);
-            outline: none;
-        }
-
-        .clear-search {
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            font-size: 1.2rem;
-            cursor: pointer;
-            color: #999;
-            display: none;
-            padding: 0;
-            margin: 0;
-            line-height: 1;
-        }
-
-        .clear-search:hover {
-            color: var(--primary-color);
-            transform: translateY(-50%) scale(1.1);
-        }
-
-        .search-header {
-            background: white;
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
-            margin-bottom: 2rem;
-        }
-
-        .results-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            box-shadow: 0 1px 10px rgba(0,0,0,0.05);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .results-table th,
-        .results-table td {
-            padding: 15px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-
-        .results-table th {
-            background-color: var(--primary-color);
-            color: white;
-            cursor: pointer;
-        }
-
-        .results-table tr:hover {
-            background-color: #f5f6fa;
-        }
-
-        .no-results {
-            text-align: center;
-            padding: 20px;
-            color: #666;
-        }
-
-        .controls {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 1rem;
-            flex-wrap: wrap;
-        }
-
-        button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 25px;
-            background: var(--primary-color);
-            color: var(--button-text);
-            cursor: pointer;
-            transition: all 0.3s;
-            font-size: 0.9rem;
-            font-weight: bold;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-
-        button:hover {
-            background: var(--secondary-color);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-        }
-
-        .star-button {
-            background: none;
-            border: none;
-            color: #ccc;
-            font-size: 1.5rem;
-            cursor: pointer;
-            transition: all 0.3s;
-            padding: 5px;
-            box-shadow: none;
-        }
-
-        .star-button:hover {
-            color: var(--star-color);
-            transform: scale(1.2);
-            background: none;
-            box-shadow: none;
-        }
-
-        .star-button.active {
-            color: var(--star-color);
-        }
-
-        .tabs {
-            display: flex;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #ddd;
-        }
-
-        .tab {
-            padding: 12px 24px;
-            cursor: pointer;
-            border-bottom: 3px solid transparent;
-            margin-right: 10px;
-            font-weight: bold;
-            transition: all 0.3s;
-        }
-
-        .tab.active {
-            border-bottom: 3px solid var(--primary-color);
-            color: var(--primary-color);
-        }
-
-        .tab:hover:not(.active) {
-            border-bottom: 3px solid #ddd;
-            background-color: #f5f5f5;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .setlist-container {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
-            margin-bottom: 2rem;
-        }
-
-        .setlist-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .setlist-title {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: var(--primary-color);
-        }
-
-        .setlist-actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .setlist-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 15px;
-            border-bottom: 1px solid #eee;
-            transition: background-color 0.2s;
-        }
-
-        .setlist-item:hover {
-            background-color: #f5f6fa;
-        }
-
-        .setlist-item-info {
-            flex-grow: 1;
-        }
-
-        .setlist-item-title {
-            font-weight: bold;
-            margin-bottom: 4px;
-        }
-
-        .setlist-item-composer {
-            font-size: 0.9rem;
-            color: #666;
-        }
-
-        .setlist-item-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .remove-from-setlist {
-            color: var(--remove-color);
-            background: none;
-            box-shadow: none;
-            padding: 5px 10px;
-        }
-
-        .remove-from-setlist:hover {
-            background: #ffeeee;
-            color: var(--remove-color);
-            box-shadow: none;
-            transform: none;
-        }
-
-        .move-item {
-            background: #eee;
-            color: #333;
-            box-shadow: none;
-            padding: 5px 10px;
-        }
-
-        .move-item:hover {
-            background: #ddd;
-            color: #333;
-            box-shadow: none;
-            transform: none;
-        }
-
-        .empty-setlist {
-            text-align: center;
-            padding: 30px;
-            color: #999;
-            font-style: italic;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-content {
-            background-color: white;
-            padding: 30px;
-            border-radius: 10px;
-            width: 90%;
-            max-width: 500px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .modal-title {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: var(--primary-color);
-        }
-
-        .close-modal {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: #999;
-            padding: 0;
-        }
-
-        .modal-form {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .form-group label {
-            font-weight: bold;
-        }
-
-        .form-group input, .form-group textarea {
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 1rem;
-        }
-
-        .modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 0.8rem;
-            font-weight: bold;
-            margin-right: 5px;
-        }
-
-        .badge-difficulty {
-            background-color: #e9ecef;
-            color: #495057;
-        }
-
-        .badge-easy {
-            background-color: #d4edda;
-            color: #155724;
-        }
-
-        .badge-medium {
-            background-color: #fff3cd;
-            color: #856404;
-        }
-
-        .badge-hard {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
-
-        .badge-genre {
-            background-color: #cce5ff;
-            color: #004085;
-        }
-
-        .pagination {
-            display: flex;
-            justify-content: center;
-            margin-top: 20px;
-            gap: 5px;
-        }
-
-        .pagination button {
-            padding: 8px 12px;
-            border-radius: 5px;
-            background: white;
-            color: var(--primary-color);
-            border: 1px solid #ddd;
-            box-shadow: none;
-        }
-
-        .pagination button.active {
-            background: var(--primary-color);
-            color: white;
-        }
-
-        .pagination button:hover:not(.active) {
-            background: #f5f5f5;
-            transform: none;
-        }
-
-        .filter-container {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-        }
-
-        .filter-dropdown {
-            padding: 8px 15px;
-            border: 1px solid #ddd;
-            border-radius: 20px;
-            background: white;
-            cursor: pointer;
-        }
-
-        .number-column {
-            width: 50px;
-            text-align: center;
-        }
-
-        .setlist-drag-handle {
-            cursor: grab;
-            color: #999;
-            margin-right: 10px;
-        }
-
-        .setlist-drag-handle:hover {
-            color: var(--primary-color);
-        }
-
-        .setlist-item.dragging {
-            opacity: 0.5;
-            background-color: #f0f0f0;
-        }
-
-        @media (max-width: 768px) {
-            .controls {
-                flex-direction: column;
-            }
-            
-            .results-table {
-                font-size: 0.9rem;
-            }
-            
-            .results-table th, 
-            .results-table td {
-                padding: 10px;
-            }
-            
-            .tab {
-                padding: 10px 15px;
-                font-size: 0.9rem;
-            }
-
-            .setlist-actions {
-                flex-direction: column;
-            }
-        }
-    </style>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <meta name="theme-color" content="#6d1a36">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="MV Archiv">
+  <title>MV Endersbach Musikarchiv</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <style>
+    :root {
+      --wine: #6d1a36;
+      --wine-2: #8c2d4d;
+      --ink: #241d20;
+      --muted: #786d72;
+      --paper: #f5f1f3;
+      --glass: rgba(255,255,255,.68);
+      --glass-strong: rgba(255,255,255,.84);
+      --line: rgba(109,26,54,.14);
+      --shadow: 0 12px 40px rgba(65,30,45,.16);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 0%, rgba(140,45,77,.15), transparent 33%),
+        radial-gradient(circle at 100% 40%, rgba(109,26,54,.10), transparent 36%),
+        var(--paper);
+    }
+    button, input, textarea { font: inherit; }
+
+    .app {
+      height: 100dvh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      overflow: hidden;
+    }
+
+    .topbar {
+      min-height: calc(52px + var(--safe-top));
+      padding: calc(8px + var(--safe-top)) 14px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .brand {
+      display: flex; align-items: center; gap: 9px; min-width: 0;
+      font-weight: 750; letter-spacing: -.02em;
+    }
+    .brand img { width: 30px; height: 30px; object-fit: contain; border-radius: 8px; }
+    .brand span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .icon-button {
+      width: 42px; height: 42px; border: 0; border-radius: 50%;
+      background: var(--glass); color: var(--wine);
+      box-shadow: 0 6px 20px rgba(65,30,45,.10);
+      backdrop-filter: blur(18px) saturate(160%);
+      -webkit-backdrop-filter: blur(18px) saturate(160%);
+      display: grid; place-items: center; cursor: pointer;
+      font-size: 23px;
+    }
+
+    main { position: relative; overflow: hidden; min-height: 0; }
+    .view {
+      position: absolute; inset: 0;
+      display: none; overflow: hidden;
+      padding: 8px 14px 12px;
+    }
+    .view.active { display: flex; flex-direction: column; }
+
+    .welcome {
+      flex: 1; display: grid; place-items: center; text-align: center;
+      padding: 20px 22px 90px;
+    }
+    .welcome-card {
+      max-width: 420px; padding: 28px 24px; border-radius: 30px;
+      background: rgba(255,255,255,.42);
+      border: 1px solid rgba(255,255,255,.7);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(24px) saturate(150%);
+      -webkit-backdrop-filter: blur(24px) saturate(150%);
+    }
+    .welcome h1 { margin: 0 0 8px; font-size: clamp(25px, 7vw, 36px); color: var(--wine); }
+    .welcome p { margin: 0; line-height: 1.45; color: var(--muted); }
+
+    .search-box {
+      position: relative; flex: 0 0 auto; margin-bottom: 10px;
+    }
+    .search-box input {
+      width: 100%; height: 54px; border: 1px solid rgba(255,255,255,.8);
+      border-radius: 22px; padding: 0 48px 0 46px; font-size: 18px;
+      outline: none; background: var(--glass-strong); color: var(--ink);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    }
+    .search-box input:focus { box-shadow: 0 0 0 3px rgba(109,26,54,.14), var(--shadow); }
+    .search-symbol { position: absolute; left: 16px; top: 14px; font-size: 21px; }
+    .clear {
+      position: absolute; right: 8px; top: 6px; width: 42px; height: 42px;
+      border: 0; border-radius: 50%; background: transparent; font-size: 24px;
+      color: var(--muted); cursor: pointer;
+    }
+
+    .list {
+      min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+      background: rgba(255,255,255,.52); border: 1px solid rgba(255,255,255,.75);
+      border-radius: 24px; box-shadow: var(--shadow); padding: 6px;
+    }
+    .song-row {
+      width: 100%; min-height: 58px; border: 0; background: transparent;
+      border-bottom: 1px solid var(--line); display: grid;
+      grid-template-columns: 48px 1fr; align-items: center; text-align: left;
+      padding: 6px 10px; color: var(--ink); cursor: pointer; border-radius: 16px;
+    }
+    .song-row:last-child { border-bottom: 0; }
+    .song-row:active { background: rgba(109,26,54,.09); }
+    .song-number { font-size: 21px; font-weight: 800; color: var(--wine); font-variant-numeric: tabular-nums; }
+    .song-title { font-size: 16px; line-height: 1.2; font-weight: 650; }
+    .empty { padding: 28px 18px; text-align: center; color: var(--muted); }
+
+    .sheet-header, .setlist-header {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      margin-bottom: 9px;
+    }
+    .back-button {
+      border: 0; border-radius: 18px; padding: 9px 12px;
+      background: var(--glass); color: var(--wine); font-weight: 700;
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    }
+    .view-title { margin: 0; color: var(--wine); font-size: 21px; text-align: center; }
+    .page-count { min-width: 54px; text-align: right; color: var(--muted); font-weight: 700; }
+
+    .sheet-frame {
+      flex: 1; min-height: 0; display: grid; place-items: center;
+      border-radius: 24px; overflow: hidden; background: white;
+      box-shadow: var(--shadow); border: 1px solid rgba(255,255,255,.8);
+    }
+    .sheet-frame img { width: 100%; height: 100%; object-fit: contain; display: block; }
+
+    .setlist-stage {
+      flex: 1; min-height: 0; position: relative;
+      border-radius: 26px; overflow: hidden; background: rgba(255,255,255,.68);
+      border: 1px solid rgba(255,255,255,.8); box-shadow: var(--shadow);
+      touch-action: pan-y;
+    }
+    .setlist-page {
+      height: 100%; padding: 12px 10px 18px;
+      display: grid; gap: 5px; align-content: center;
+    }
+    .setlist-row {
+      min-height: 0; display: grid; grid-template-columns: 50px 1fr;
+      align-items: center; border-radius: 16px; padding: 7px 10px;
+      background: rgba(255,255,255,.62); border: 1px solid rgba(109,26,54,.08);
+    }
+    .setlist-pos { color: var(--muted); font-size: 12px; display: block; }
+    .setlist-number { color: var(--wine); font-size: 22px; font-weight: 850; line-height: 1; }
+    .setlist-title { font-weight: 750; line-height: 1.15; font-size: clamp(14px, 4.3vw, 18px); }
+    .tap-zone { position: absolute; top: 0; bottom: 0; width: 35%; z-index: 2; }
+    .tap-zone.left { left: 0; }
+    .tap-zone.right { right: 0; }
+    .dots { display: flex; justify-content: center; gap: 7px; padding: 10px 0 2px; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(109,26,54,.22); }
+    .dot.active { width: 18px; border-radius: 8px; background: var(--wine); }
+
+    .bottom-nav {
+      min-height: calc(82px + var(--safe-bottom));
+      padding: 8px 18px calc(10px + var(--safe-bottom));
+      display: grid; grid-template-columns: 1fr 1.35fr 1fr; align-items: end; gap: 12px;
+    }
+    .bubble {
+      border: 1px solid rgba(255,255,255,.78); color: var(--wine);
+      background: var(--glass); box-shadow: var(--shadow);
+      backdrop-filter: blur(22px) saturate(180%);
+      -webkit-backdrop-filter: blur(22px) saturate(180%);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .bubble.small { width: 56px; height: 56px; border-radius: 50%; justify-self: center; font-size: 25px; }
+    .bubble.search {
+      height: 68px; border-radius: 28px; font-weight: 850; font-size: 17px; gap: 8px;
+      background: rgba(109,26,54,.88); color: white; border-color: rgba(255,255,255,.38);
+    }
+    .bubble:active { transform: scale(.97); }
+
+    .overlay {
+      position: fixed; inset: 0; z-index: 50; display: none;
+      background: rgba(38,22,29,.24); backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: calc(66px + var(--safe-top)) 14px calc(18px + var(--safe-bottom));
+    }
+    .overlay.open { display: block; }
+    .panel {
+      max-width: 520px; margin: 0 auto; max-height: 100%;
+      overflow: auto; border-radius: 28px; padding: 18px;
+      background: rgba(255,255,255,.91); box-shadow: 0 20px 60px rgba(35,15,25,.26);
+    }
+    .panel h2 { margin: 0 0 14px; color: var(--wine); }
+    .menu-list { display: grid; gap: 10px; }
+    .menu-item {
+      width: 100%; border: 0; border-radius: 18px; padding: 15px 16px;
+      text-align: left; background: rgba(109,26,54,.07); color: var(--ink);
+      font-weight: 750; cursor: pointer;
+    }
+    textarea {
+      width: 100%; min-height: 160px; resize: none; border-radius: 20px;
+      border: 1px solid var(--line); padding: 14px; outline: none; background: white;
+    }
+    .primary {
+      width: 100%; margin-top: 12px; border: 0; border-radius: 20px; padding: 14px;
+      background: var(--wine); color: white; font-weight: 800;
+    }
+    .secondary {
+      width: 100%; margin-top: 9px; border: 0; border-radius: 20px; padding: 13px;
+      background: rgba(109,26,54,.08); color: var(--wine); font-weight: 800;
+    }
+    .genre-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .genre-card {
+      border: 0; border-radius: 20px; padding: 15px 12px; text-align: left;
+      background: rgba(109,26,54,.07); color: var(--ink);
+    }
+    .genre-card strong { display: block; color: var(--wine); font-size: 17px; }
+    .genre-card span { color: var(--muted); font-size: 13px; }
+
+    @media (min-width: 700px) {
+      .app { max-width: 520px; margin: 0 auto; border-left: 1px solid var(--line); border-right: 1px solid var(--line); }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header-logo">
-            <svg viewBox="0 0 24 24">
-                <path d="M9 18V5l12-2v13"></path>
-                <circle cx="6" cy="18" r="3"></circle>
-                <circle cx="18" cy="16" r="3"></circle>
-            </svg>
-            <h1>MV Endersbach Musikarchiv</h1>
-        </div>
-
-        <div class="tabs">
-            <div class="tab active" data-tab="search">Musiksuche</div>
-            <div class="tab" data-tab="setlist">Setlist</div>
-        </div>
-
-        <div id="search-tab" class="tab-content active">
-            <div class="search-header">
-                <div class="search-container">
-                    <input type="text" id="searchInput" placeholder="Suche nach Titel, Nummer, Genre...">
-                    <button class="clear-search" id="clearSearch">×</button>
-                </div>
-                <div class="filter-container">
-                    <select id="genreFilter" class="filter-dropdown">
-                        <option value="">Alle Genres</option>
-                    <option value="Filmmusik">Filmmusik</option><option value="Folk">Folk</option><option value="Jazz">Jazz</option><option value="Konzertwerk">Konzertwerk</option><option value="Latin">Latin</option><option value="Marsch">Marsch</option><option value="Musical">Musical</option><option value="Polka">Polka</option><option value="Pop">Pop</option><option value="Rock">Rock</option><option value="Swing">Swing</option><option value="TV-Musik">TV-Musik</option><option value="Walzer">Walzer</option><option value="World">World</option></select>
-                </div>
-                <div class="controls">
-                    <button id="exportPDF">Als PDF exportieren</button>
-                    <button id="resetFilters">Filter zurücksetzen</button>
-                </div>
-            </div>
-
-            <table class="results-table" id="resultsTable">
-                <thead>
-                    <tr>
-                        <th class="number-column" data-sort="id">Nr.</th>
-                        <th data-sort="title">Titel</th>
-                        <th data-sort="genre">Genre</th>
-                        <th>Zur Setlist</th>
-                    </tr>
-                </thead>
-                <tbody id="resultsBody"><tr>
-                    <td class="number-column">1</td>
-                    <td>Regimentskinder</td>
-                    <td><span class="badge badge-genre">Marsch</span></td>
-                    <td>
-                        <button class="star-button " data-id="1">
-                            <i class="fas fa-star"></i>
-                        </button>
-                    </td>
-                </tr><tr>
-                    <td class="number-column">2</td>
-                    <td>Ein halbes Jahrhundert</td>
-                    <td><span class="badge badge-genre">Marsch</span></td>
-                    <td>
-                        <button class="star-button " data-id="2">
-                            <i class="fas fa-star"></i>
-                        </button>
-                    </td>
-                </tr><tr>
-                    <td class="number-column">3</td>
-                    <td>Colonel Bogey March</td>
-                    <td><span class="badge badge-genre">Marsch</span></td>
-                    <td>
-                        <button class="star-button " data-id="3">
-                            <i class="fas fa-star"></i>
-                        </button>
-                    </td>
-                </tr><tr>
-                    <td class="number-column">4</td>
-                    <td>Fliegermarsch</td>
-                    <td><span class="badge badge-genre">Marsch</span></td>
-                    <td>
-                        <button class="star-button " data-id="4">
-                            <i class="fas fa-star"></i>
-                        </button>
-                    </td>
-                </tr><tr>
-                    <td class="number-column">5</td>
-                    <td>Gablonzer Perlen (Grünes Heft 17)</td>
-                    <td><span class="badge badge-genre">Polka</span></td>
-                    <td>
-                        <button class="star-button " data-id="5">
-                            <i class="fas fa-star"></i>
-                        </button>
-                    </td>
-                </tr><tr>
-                    <td class="number-column">6</td>
-                    <td>Die Sonne geht auf</td>
-                    <td><span class="badge badge-genre">Konzertwerk</span></td>
-                    <td>
-                        <button class="star-button " data-id="6">
-                            <i class="fas fa-star"></i>
-                        </button>
-                    </td>
-                </tr><tr>
-                    <td class="number-column">7</td>
-                    <td>Kaiserin Sissi</td>
-                    <td><span class="badge badge-genre">Walzer</span></td>
-                    <td>
-                        <button class="star-button " data-id="7">
-                            <i class="fas fa-star"></i>
-                        </button>
-                    </td>
-                </tr><tr>
-                    <td class="number-column">8</td>
-                    <td>Steeephanspolka</td>
-                    <td><span class="badge badge-genre">Polka</span></td>
-                    <td>
-                        <button class="star-button " data-id="8">
-                            <i class="fas fa-star"></i>
-                        </button>
-                    </td>
-                </tr><tr>
-                    <td class="number-column">9</td>
-                    <td>Zum Städtele hinaus</td>
-                    <td><span class="badge badge-genre">Marsch</span></td>
-                    <td>
-                        <button class="star-button " data-id="9">
-                            <i class="fas fa-star"></i>
-                        </button>
-                    </td>
-                </tr><tr>
-                    <td class="number-column">10</td>
-                    <td>Musik verbindet</td>
-                    <td><span class="badge badge-genre">Konzertwerk</span></td>
-                    <td>
-                        <button class="star-button " data-id="10">
-                            <i class="fas fa-star"></i>
-                        </button>
-                    </td>
-                </tr><tr>
-                    <td class="number-column">11</td>
-                    <td>Der Rumtreiber</td>
-                    <td><span class="badge badge-genre">Polka</span></td>
-                    <td>
-                        <button class="star-button " data-id="11">
-                            <i class="fas fa-star"></i>
-                        </button>
-                    </td>
-                </tr><tr>
-                    <td class="number-column">12</td>
-                    <td>Stückbrimische Polka</td>
-                    <td><span class="badge badge-genre">Polka</span></td>
-                    <td>
-                        <button class="star-button " data-id="12">
-                            <i class="fas fa-star"></i>
-                        </button>
-                    </td>
-                </tr><tr>
-                    <td class="number-column">13</td>
-                    <td>Jubiläumsklänge</td>
-                    <td><span class="badge badge-genre">Marsch</span></td>
-                    <td>
-                        <button class="star-button " data-id="13">
-                            <i class="fas fa-star"></i>
-                        </button>
-                    </td>
-                </tr><tr>
-                    <td class="number-column">14</td>
-                    <td>Kuschel-Polka</td>
-                    <td><span class="badge badge-genre">Polka</span></td>
-                    <td>
-                        <button class="star-button " data-id="14">
-                            <i class="fas fa-star"></i>
-                        </button>
-                    </td>
-                </tr><tr>
-                    <td class="number-column">15</td>
-                    <td>Auf der Vogelwiese</td>
-                    <td><span class="badge badge-genre">Polka</span></td>
-                    <td>
-                        <button class="star-button " data-id="15">
-                            <i class="fas fa-star"></i>
-                        </button>
-                    </td>
-                </tr><tr>
-                    <td class="number-column">16</td>
-                    <td>Egerländer Traum</td>
-                    <td><span class="badge badge-genre">Polka</span></td>
-                    <td>
-                        <button class="star-button " data-id="16">
-                            <i class="fas fa-star"></i>
-                        </button>
-                    </td>
-                </tr><tr>
-                    <td class="number-column">17</td>
-                    <td>Morgengedanken</td>
-                    <td><span class="badge badge-genre">Konzertwerk</span></td>
-                    <td>
-                        <button class="star-button " data-id="17">
-                            <i class="fas fa-star"></i>
-                        </button>
-                    </td>
-                </tr><tr>
-                    <td class="number-column">18</td>
-                    <td>Slavonicka-Polka</td>
-                    <td><span class="badge badge-genre">Polka</span></td>
-                    <td>
-                        <button class="star-button " data-id="18">
-                            <i class="fas fa-star"></i>
-                        </button>
-                    </td>
-                </tr><tr>
-                    <td class="number-column">19</td>
-                    <td>Von Freund zu Freund</td>
-                    <td><span class="badge badge-genre">Marsch</span></td>
-                    <td>
-                        <button class="star-button " data-id="19">
-                            <i class="fas fa-star"></i>
-                        </button>
-                    </td>
-                </tr><tr>
-                    <td class="number-column">20</td>
-                    <td>Böhmisches Liebespärchen</td>
-                    <td><span class="badge badge-genre">Polka</span></td>
-                    <td>
-                        <button class="star-button " data-id="20">
-                            <i class="fas fa-star"></i>
-                        </button>
-                    </td>
-                </tr></tbody>
-            </table>
-            <div id="noResults" class="no-results" style="display: none;">
-                Keine Ergebnisse gefunden.
-            </div>
-            <div class="pagination" id="pagination"><button class="active">1</button><button>2</button><button>3</button><button>4</button><button>5</button><button>6</button><button>»</button></div>
-        </div>
-
-        <div id="setlist-tab" class="tab-content">
-            <div class="setlist-container">
-                <div class="setlist-header">
-                    <div class="setlist-title">Aktuelle Setlist</div>
-                    <div class="setlist-actions">
-                        <button id="saveSetlist">Setlist speichern</button>
-                        <button id="loadSetlist">Setlist laden</button>
-                        <button id="exportSetlistPDF">Als PDF exportieren</button>
-                        <button id="clearSetlist">Setlist leeren</button>
-                    </div>
-                </div>
-                <div id="setlistItems" class="sortable-list"><div class="empty-setlist">Die Setlist ist leer. Füge Stücke aus der Musiksuche hinzu.</div></div>
-            </div>
-        </div>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <img src="logo.svg" alt="" onerror="this.style.display='none'">
+      <span>MV Endersbach</span>
     </div>
+    <button class="icon-button" id="menuButton" aria-label="Menü öffnen">⋮</button>
+  </header>
 
-    <!-- Save Setlist Modal -->
-    <div id="saveSetlistModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-title">Setlist speichern</div>
-                <button class="close-modal">×</button>
-            </div>
-            <div class="modal-form">
-                <div class="form-group">
-                    <label for="setlistName">Name der Setlist</label>
-                    <input type="text" id="setlistName" placeholder="z.B. Oberdorffest 2020">
-                </div>
-                <div class="form-group">
-                    <label for="setlistDescription">Beschreibung (optional)</label>
-                    <textarea id="setlistDescription" rows="3" placeholder="Beschreibung oder Notizen zur Setlist"></textarea>
-                </div>
-                <div class="modal-actions">
-                    <button id="cancelSaveSetlist">Abbrechen</button>
-                    <button id="confirmSaveSetlist">Speichern</button>
-                </div>
-            </div>
+  <main>
+    <section class="view active" id="homeView">
+      <div class="welcome">
+        <div class="welcome-card">
+          <h1>Musikarchiv</h1>
+          <p>Suche ein Stück, füge eine Setlist ein oder öffne die Schnellnoten.</p>
         </div>
-    </div>
+      </div>
+    </section>
 
-    <!-- Load Setlist Modal -->
-    <div id="loadSetlistModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-title">Setlist laden</div>
-                <button class="close-modal">×</button>
-            </div>
-            <div id="savedSetlists">
-                <!-- Saved setlists will be populated here -->
-            </div>
-            <div class="modal-actions">
-                <button id="cancelLoadSetlist">Abbrechen</button>
-            </div>
+    <section class="view" id="searchView">
+      <div class="search-box">
+        <span class="search-symbol">⌕</span>
+        <input id="searchInput" type="search" inputmode="search" autocomplete="off"
+               placeholder="Titel oder Nummer suchen">
+        <button class="clear" id="clearSearch" aria-label="Suche löschen">×</button>
+      </div>
+      <div class="list" id="searchResults"></div>
+    </section>
+
+    <section class="view" id="setlistView">
+      <div class="setlist-header">
+        <button class="back-button" data-home>‹ Zurück</button>
+        <h2 class="view-title">Setlist</h2>
+        <div class="page-count" id="pageCount">1 / 1</div>
+      </div>
+      <div class="setlist-stage" id="setlistStage">
+        <div class="tap-zone left" id="prevPage" aria-label="Vorherige Seite"></div>
+        <div class="tap-zone right" id="nextPage" aria-label="Nächste Seite"></div>
+        <div class="setlist-page" id="setlistPage"></div>
+      </div>
+      <div class="dots" id="pageDots"></div>
+    </section>
+
+    <section class="view" id="happyView">
+      <div class="sheet-header">
+        <button class="back-button" data-home>‹ Zurück</button>
+        <h2 class="view-title">Happy Birthday</h2>
+        <span style="width:64px"></span>
+      </div>
+      <div class="sheet-frame"><img src="happy-birthday.svg" alt="Noten zu Happy Birthday"></div>
+    </section>
+
+    <section class="view" id="prositView">
+      <div class="sheet-header">
+        <button class="back-button" data-home>‹ Zurück</button>
+        <h2 class="view-title">Ein Prosit</h2>
+        <span style="width:64px"></span>
+      </div>
+      <div class="sheet-frame"><img src="ein-prosit.svg" alt="Noten zu Ein Prosit"></div>
+    </section>
+
+    <section class="view" id="genreView">
+      <div class="sheet-header">
+        <button class="back-button" id="backGenres">‹ Genres</button>
+        <h2 class="view-title" id="genreTitle">Genre</h2>
+        <span style="width:64px"></span>
+      </div>
+      <div class="list" id="genreResults"></div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <button class="bubble small" id="happyButton" aria-label="Happy Birthday">🧁</button>
+    <button class="bubble search" id="searchButton"><span>⌕</span> Suche</button>
+    <button class="bubble small" id="prositButton" aria-label="Ein Prosit">🎺</button>
+  </nav>
+</div>
+
+<div class="overlay" id="menuOverlay">
+  <div class="panel">
+    <h2>Menü</h2>
+    <div class="menu-list">
+      <button class="menu-item" id="openSetlistInput">Setlist einfügen</button>
+      <button class="menu-item" id="openGenres">Nach Genres</button>
+      <button class="menu-item" id="showCurrentSetlist">Aktuelle Setlist anzeigen</button>
+      <button class="menu-item" id="closeMenu">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="setlistOverlay">
+  <div class="panel">
+    <h2>Setlist einfügen</h2>
+    <textarea id="setlistInput" placeholder="Zum Beispiel: 4, 21, 53, 79, 100"></textarea>
+    <button class="primary" id="buildSetlist">Setlist erstellen</button>
+    <button class="secondary" id="cancelSetlist">Abbrechen</button>
+  </div>
+</div>
+
+<div class="overlay" id="genresOverlay">
+  <div class="panel">
+    <h2>Genres</h2>
+    <div class="genre-grid" id="genreGrid"></div>
+    <button class="secondary" id="closeGenres">Schließen</button>
+  </div>
+</div>
+
+<script>
+const musicData = [
+  { id: 1, title: "Deutschmeister Regimentsmarsch", genre: "Marsch" },
+  { id: 2, title: "Ein halbes Jahrhundert", genre: "Marsch" },
+  { id: 3, title: "Colonel Bogey March", genre: "Marsch" },
+  { id: 4, title: "Fliegermarsch", genre: "Marsch" },
+  { id: 5, title: "Gablonzer Perlen (Grünes Heft)", genre: "Polka" },
+  { id: 6, title: "Die Sonne geht auf", genre: "Konzertwerk" },
+  { id: 7, title: "Kaiserin Sissi", genre: "Walzer" },
+  { id: 8, title: "Steeephanspolka", genre: "Polka" },
+  { id: 9, title: "Tenorhornparade", genre: "Polka" },
+  { id: 10, title: "Musik verbindet", genre: "Konzertwerk" },
+  { id: 11, title: "So schön ist Blasmusik", genre: "Polka" },
+  { id: 12, title: "Südböhmische Polka", genre: "Polka" },
+  { id: 13, title: "Malvasia", genre: "Konzertwerk" },
+  { id: 14, title: "Kuschel-Polka", genre: "Polka" },
+  { id: 15, title: "Auf der Vogelwiese", genre: "Polka" },
+  { id: 16, title: "Teppichklopfer-Polka", genre: "Polka" },
+  { id: 17, title: "Auf Wanderschaft (Rückseite von der Teppichklopfer-Polka)", genre: "Marsch" },
+  { id: 18, title: "Slavonicka-Polka", genre: "Polka" },
+  { id: 19, title: "Von Freund zu Freund", genre: "Marsch" },
+  { id: 20, title: "Hallo kleine Maus", genre: "Polka" },
+  { id: 21, title: "Böhmischer Traum", genre: "Polka" },
+  { id: 22, title: "Uptown Funk!", genre: "Pop" },
+  { id: 23, title: "September", genre: "Pop" },
+  { id: 24, title: "Skoda Lasky", genre: "Polka" },
+  { id: 25, title: "Don’t stop Believin‘", genre: "Rock" },
+  { id: 26, title: "Hello Mary Lou", genre: "Pop" },
+  { id: 27, title: "Nessaja", genre: "Pop" },
+  { id: 28, title: "Spirit Of 69", genre: "Rock" },
+  { id: 29, title: "Hawaii-Five-0", genre: "TV-Musik" },
+  { id: 30, title: "Matrimony", genre: "Konzertwerk" },
+  { id: 31, title: "Katharinen Polka", genre: "Polka" },
+  { id: 32, title: "Bon Jovi – Rock mix", genre: "Rock" },
+  { id: 33, title: "Washington Post", genre: "Marsch" },
+  { id: 34, title: "Böhmisches Gold", genre: "Polka" },
+  { id: 35, title: "The 60´s Collection", genre: "Pop" },
+  { id: 36, title: "80er KULT(tour)", genre: "Pop" },
+  { id: 37, title: "Udo Jürgens live", genre: "Pop" },
+  { id: 38, title: "Summernight Rock", genre: "Rock" },
+  { id: 39, title: "Rock´n Roll forever", genre: "Rock" },
+  { id: 40, title: "Chattanooga Choo Choo", genre: "Swing" },
+  { id: 41, title: "Golden Swing Time", genre: "Swing" },
+  { id: 42, title: "Rock it", genre: "Rock" },
+  { id: 43, title: "Deep Purple Medley", genre: "Rock" },
+  { id: 44, title: "Jive Hits", genre: "Swing" },
+  { id: 45, title: "Jive Hits Vol. 2", genre: "Swing" },
+  { id: 46, title: "Don’t stop me now", genre: "Rock" },
+  { id: 47, title: "Can’t stop the Feeling", genre: "Pop" },
+  { id: 48, title: "Wien bleibt Wien", genre: "Walzer" },
+  { id: 49, title: "Coldplay on Stage", genre: "Pop" },
+  { id: 50, title: "Boney M. Super Hits", genre: "Pop" },
+  { id: 51, title: "Oldies Spectacular", genre: "Pop" },
+  { id: 52, title: "Hands Up", genre: "Pop" },
+  { id: 53, title: "A Tribute to Michael Jackson", genre: "Pop" },
+  { id: 54, title: "St. Louis Blues", genre: "Jazz" },
+  { id: 55, title: "Happy Spain", genre: "Konzertwerk" },
+  { id: 56, title: "Böhmische Liebe", genre: "Polka" },
+  { id: 57, title: "Musikantenfreundschaft", genre: "Polka" },
+  { id: 58, title: "In the Stone", genre: "Pop" },
+  { id: 59, title: "Don’t start now", genre: "Pop" },
+  { id: 60, title: "Hausl-Polka", genre: "Polka" },
+  { id: 61, title: "Salemonia", genre: "Konzertwerk" },
+  { id: 62, title: "Tief drin im Böhmerwald", genre: "Polka" },
+  { id: 63, title: "Wir Musikanten", genre: "Polka" },
+  { id: 64, title: "Florentiner Marsch", genre: "Marsch" },
+  { id: 65, title: "Pata Pata", genre: "World" },
+  { id: 66, title: "You can call me AL", genre: "Pop" },
+  { id: 67, title: "Salletmayr Polka", genre: "Polka" },
+  { id: 68, title: "1809er Marsch", genre: "Marsch" },
+  { id: 69, title: "Chicago", genre: "Konzertwerk" },
+  { id: 70, title: "Golden Sixties", genre: "Pop" },
+  { id: 71, title: "Latin Gold", genre: "Latin" },
+  { id: 72, title: "A Rock Selection", genre: "Rock" },
+  { id: 73, title: "Die tollkühnen Männer...", genre: "Filmmusik" },
+  { id: 74, title: "Kool & the Gang Greatest Hits", genre: "Pop" },
+  { id: 75, title: "Späte Liebe", genre: "Polka" },
+  { id: 76, title: "Träumerei", genre: "Konzertwerk" },
+  { id: 77, title: "Bella Napoli", genre: "Polka" },
+  { id: 78, title: "Blas´ Musik in die Welt!", genre: "Marsch" },
+  { id: 79, title: "ABBA Gold", genre: "Pop" },
+  { id: 80, title: "James Last Golden Hits", genre: "Pop" },
+  { id: 81, title: "Brauhauspolka", genre: "Polka" },
+  { id: 82, title: "Heidrun Polka", genre: "Polka" },
+  { id: 83, title: "Happy", genre: "Pop" },
+  { id: 84, title: "Hits der 80er", genre: "Pop" },
+  { id: 85, title: "Gentlemen of Music", genre: "Konzertwerk" },
+  { id: 86, title: "Roxette", genre: "Pop" },
+  { id: 87, title: "The Greatest Showman", genre: "Musical" },
+  { id: 88, title: "Watermelon Man", genre: "Jazz" },
+  { id: 89, title: "Fuchsgraben", genre: "Polka" },
+  { id: 90, title: "Happy Trombones", genre: "Konzertwerk" },
+  { id: 91, title: "Italo Pop Classics", genre: "Pop" },
+  { id: 92, title: "Viva Colonia", genre: "Pop" },
+  { id: 93, title: "Hulapalu", genre: "Pop" },
+  { id: 94, title: "Nur noch Schuhe an", genre: "Pop" },
+  { id: 95, title: "Ein Kompliment", genre: "Pop" },
+  { id: 96, title: "Moskau", genre: "Pop" },
+  { id: 97, title: "Smoke on the Water", genre: "Rock" },
+  { id: 98, title: "Pur Party Hit Mix", genre: "Pop" },
+  { id: 99, title: "Skandal im Sperrbezirk", genre: "Pop" },
+  { id: 100, title: "Dem Land Tirol die Treue", genre: "Marsch" },
+  { id: 101, title: "Ham kummst", genre: "Pop" },
+  { id: 102, title: "Cordula Grün", genre: "Pop" },
+  { id: 103, title: "I´m Gonna Be (500 Miles)", genre: "Pop" },
+  { id: 104, title: "Narcottic", genre: "Rock" },
+  { id: 105, title: "Altes Fieber", genre: "Pop" },
+  { id: 106, title: "Layla", genre: "Pop" },
+  { id: 107, title: "Partyplanet", genre: "Pop" }
+];
+
+const PAGE_SIZE = 6;
+let currentSetlist = JSON.parse(localStorage.getItem("mv-current-setlist") || "[]");
+let currentSetlistPage = 0;
+let touchStartX = null;
+
+const views = [...document.querySelectorAll(".view")];
+const searchInput = document.getElementById("searchInput");
+const searchResults = document.getElementById("searchResults");
+
+function normalize(value) {
+  return String(value)
+    .toLocaleLowerCase("de")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[’‘´`]/g, "'")
+    .replace(/[^a-z0-9äöüß' ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function showView(id) {
+  views.forEach(view => view.classList.toggle("active", view.id === id));
+}
+
+function goHome() {
+  showView("homeView");
+  searchInput.blur();
+}
+
+document.querySelectorAll("[data-home]").forEach(button => button.addEventListener("click", goHome));
+
+document.getElementById("searchButton").addEventListener("click", () => {
+  showView("searchView");
+  renderSearch();
+  setTimeout(() => searchInput.focus(), 60);
+});
+
+document.getElementById("happyButton").addEventListener("click", () => showView("happyView"));
+document.getElementById("prositButton").addEventListener("click", () => showView("prositView"));
+
+function renderSearch() {
+  const query = normalize(searchInput.value);
+  if (!query) {
+    searchResults.innerHTML = '<div class="empty">Tippe einen Titel oder eine Ordnernummer ein.</div>';
+    return;
+  }
+
+  const matches = musicData.filter(item =>
+    normalize(item.title).includes(query) ||
+    String(item.id).includes(query)
+  );
+
+  searchResults.innerHTML = matches.length
+    ? matches.map(item => `
+      <button class="song-row" data-song="${item.id}">
+        <span class="song-number">${item.id}</span>
+        <span class="song-title">${item.title}</span>
+      </button>`).join("")
+    : '<div class="empty">Kein passendes Stück gefunden.</div>';
+}
+
+searchInput.addEventListener("input", renderSearch);
+document.getElementById("clearSearch").addEventListener("click", () => {
+  searchInput.value = "";
+  renderSearch();
+  searchInput.focus();
+});
+
+searchResults.addEventListener("click", event => {
+  const row = event.target.closest("[data-song]");
+  if (!row) return;
+  const item = musicData.find(song => song.id === Number(row.dataset.song));
+  if (item) alert(`Nr. ${item.id}\n${item.title}`);
+});
+
+function openOverlay(id) { document.getElementById(id).classList.add("open"); }
+function closeOverlay(id) { document.getElementById(id).classList.remove("open"); }
+
+document.getElementById("menuButton").addEventListener("click", () => openOverlay("menuOverlay"));
+document.getElementById("closeMenu").addEventListener("click", () => closeOverlay("menuOverlay"));
+document.getElementById("openSetlistInput").addEventListener("click", () => {
+  closeOverlay("menuOverlay");
+  document.getElementById("setlistInput").value = currentSetlist.map(item => item.id).join(", ");
+  openOverlay("setlistOverlay");
+  setTimeout(() => document.getElementById("setlistInput").focus(), 60);
+});
+document.getElementById("cancelSetlist").addEventListener("click", () => closeOverlay("setlistOverlay"));
+
+document.getElementById("buildSetlist").addEventListener("click", () => {
+  const raw = document.getElementById("setlistInput").value;
+  const numbers = [...raw.matchAll(/\b(?:10[0-7]|[1-9][0-9]?|0?[1-9])\b/g)].map(match => Number(match[0]));
+  if (!numbers.length) {
+    alert("Ich konnte keine gültigen Nummern zwischen 1 und 107 erkennen.");
+    return;
+  }
+
+  const invalid = numbers.filter(number => !musicData.some(item => item.id === number));
+  currentSetlist = numbers
+    .map(number => musicData.find(item => item.id === number))
+    .filter(Boolean);
+
+  localStorage.setItem("mv-current-setlist", JSON.stringify(currentSetlist));
+  currentSetlistPage = 0;
+  closeOverlay("setlistOverlay");
+  renderSetlist();
+  showView("setlistView");
+
+  if (invalid.length) alert(`Nicht gefundene Nummern: ${invalid.join(", ")}`);
+});
+
+function renderSetlist() {
+  const totalPages = Math.max(1, Math.ceil(currentSetlist.length / PAGE_SIZE));
+  currentSetlistPage = Math.min(Math.max(0, currentSetlistPage), totalPages - 1);
+  const start = currentSetlistPage * PAGE_SIZE;
+  const pageItems = currentSetlist.slice(start, start + PAGE_SIZE);
+
+  document.getElementById("pageCount").textContent = `${currentSetlistPage + 1} / ${totalPages}`;
+  document.getElementById("setlistPage").innerHTML = pageItems.length
+    ? pageItems.map((item, index) => `
+      <div class="setlist-row">
+        <div>
+          <span class="setlist-pos">${start + index + 1}.</span>
+          <span class="setlist-number">${item.id}</span>
         </div>
-    </div>
+        <div class="setlist-title">${item.title}</div>
+      </div>`).join("")
+    : '<div class="empty">Noch keine Setlist eingefügt.</div>';
 
-    <script>
-        // Complete music data with all pieces
-        const musicData = [
-            { id: 1, title: "Regimentskinder", genre: "Marsch" },
-            { id: 2, title: "Ein halbes Jahrhundert", genre: "Marsch" },
-            { id: 3, title: "Colonel Bogey March", genre: "Marsch" },
-            { id: 4, title: "Fliegermarsch", genre: "Marsch" },
-            { id: 5, title: "Gablonzer Perlen (Grünes Heft 17)", genre: "Polka" },
-            { id: 6, title: "Die Sonne geht auf", genre: "Konzertwerk" },
-            { id: 7, title: "Kaiserin Sissi", genre: "Walzer" },
-            { id: 8, title: "Steeephanspolka", genre: "Polka" },
-            { id: 9, title: "Zum Städtele hinaus", genre: "Marsch" },
-            { id: 10, title: "Musik verbindet", genre: "Konzertwerk" },
-            { id: 11, title: "Der Rumtreiber", genre: "Polka" },
-            { id: 12, title: "Stückbrimische Polka", genre: "Polka" },
-            { id: 13, title: "Jubiläumsklänge", genre: "Marsch" },
-            { id: 14, title: "Kuschel-Polka", genre: "Polka" },
-            { id: 15, title: "Auf der Vogelwiese", genre: "Polka" },
-            { id: 16, title: "Egerländer Traum", genre: "Polka" },
-            { id: 17, title: "Morgengedanken", genre: "Konzertwerk" },
-            { id: 18, title: "Slavonicka-Polka", genre: "Polka" },
-            { id: 19, title: "Von Freund zu Freund", genre: "Marsch" },
-            { id: 20, title: "Böhmisches Liebespärchen", genre: "Polka" },
-            { id: 21, title: "Böhmischer Traum", genre: "Polka" },
-            { id: 22, title: "Böhmische Nacht", genre: "Polka" },
-            { id: 23, title: "Böhmisch-Ola", genre: "Polka" },
-            { id: 24, title: "Skoda Lasky", genre: "Polka" },
-            { id: 25, title: "Willkommen Mädchen", genre: "Polka" },
-            { id: 26, title: "Hello Mary Lou", genre: "Pop" },
-            { id: 27, title: "Nessaja", genre: "Pop" },
-            { id: 28, title: "Spirit Of 89", genre: "Rock" },
-            { id: 29, title: "Hawaii-Five-0", genre: "TV-Musik" },
-            { id: 30, title: "Matrimony", genre: "Konzertwerk" },
-            { id: 31, title: "Katharinen Polka", genre: "Polka" },
-            { id: 32, title: "Attila", genre: "Konzertwerk" },
-            { id: 33, title: "Washington Post", genre: "Marsch" },
-            { id: 34, title: "Böhmisches Gold", genre: "Polka" },
-            { id: 35, title: "The 60's Collection", genre: "Pop" },
-            { id: 36, title: "80er KULT(tour)", genre: "Pop" },
-            { id: 37, title: "Robbie Williams", genre: "Pop" },
-            { id: 38, title: "Summerlight Rock", genre: "Rock" },
-            { id: 39, title: "Rock'n Roll forever", genre: "Rock" },
-            { id: 40, title: "Chattanooga Choo Choo", genre: "Swing" },
-            { id: 41, title: "Golden Swing Time", genre: "Swing" },
-            { id: 42, title: "Rock It", genre: "Rock" },
-            { id: 43, title: "Deep Purple Medley", genre: "Rock" },
-            { id: 44, title: "Jive Hits", genre: "Swing" },
-            { id: 45, title: "Jive Hits Vol. 2", genre: "Swing" },
-            { id: 46, title: "Birnpolka", genre: "Polka" },
-            { id: 47, title: "Irish Folk", genre: "Folk" },
-            { id: 48, title: "Wien bleibt Wien", genre: "Walzer" },
-            { id: 49, title: "Coldplay on Stage", genre: "Pop" },
-            { id: 50, title: "Boney M. Super Hits", genre: "Pop" },
-            { id: 51, title: "Odie's Spectacular", genre: "Konzertwerk" },
-            { id: 52, title: "Hands Up", genre: "Pop" },
-            { id: 53, title: "A Tribute to Michael Jackson", genre: "Pop" },
-            { id: 54, title: "St. Louis Blues", genre: "Jazz" },
-            { id: 55, title: "Happy Spain", genre: "Konzertwerk" },
-            { id: 56, title: "Böhmische Liebe", genre: "Polka" },
-            { id: 57, title: "Musikantenfeundschaft", genre: "Polka" },
-            { id: 58, title: "Beschwingt und heiter", genre: "Polka" },
-            { id: 59, title: "Federweißer Polka", genre: "Polka" },
-            { id: 60, title: "Hausi-Polka", genre: "Polka" },
-            { id: 61, title: "In der Weinschenke", genre: "Polka" },
-            { id: 62, title: "Tief drin im Böhmerwald", genre: "Polka" },
-            { id: 63, title: "Wir Musikanten", genre: "Polka" },
-            { id: 64, title: "Florentiner Marsch", genre: "Marsch" },
-            { id: 65, title: "Löhlbacher Musikantenpolka", genre: "Polka" },
-            { id: 66, title: "Der Faulenzer", genre: "Polka" },
-            { id: 67, title: "Salternaryr Polka", genre: "Polka" },
-            { id: 68, title: "180ger Marsch", genre: "Marsch" },
-            { id: 69, title: "Chicago", genre: "Konzertwerk" },
-            { id: 70, title: "Golden Sixties", genre: "Pop" },
-            { id: 71, title: "Immer wieder Siebziger", genre: "Pop" },
-            { id: 72, title: "A Rock Selection", genre: "Rock" },
-            { id: 73, title: "Die tollkühnen Männer...", genre: "Filmmusik" },
-            { id: 74, title: "Modern Girl", genre: "Pop" },
-            { id: 75, title: "Späte Liebe", genre: "Polka" },
-            { id: 76, title: "Träumerei", genre: "Konzertwerk" },
-            { id: 77, title: "Schöne Pragetin", genre: "Polka" },
-            { id: 78, title: "Blas - Musik in die Welt!", genre: "Marsch" },
-            { id: 79, title: "ABBA Gold", genre: "Pop" },
-            { id: 80, title: "James Last Golden Hits", genre: "Pop" },
-            { id: 81, title: "Brauhauspolka", genre: "Polka" },
-            { id: 82, title: "Heidrun Polka", genre: "Polka" },
-            { id: 83, title: "Mandy", genre: "Pop" },
-            { id: 84, title: "Hits der 80er", genre: "Pop" },
-            { id: 85, title: "Gentilemen of Music", genre: "Konzertwerk" },
-            { id: 86, title: "Hair", genre: "Musical" },
-            { id: 87, title: "Shred Meister", genre: "Rock" },
-            { id: 88, title: "Watermelon Man", genre: "Jazz" },
-            { id: 89, title: "Fuchsgraben", genre: "Polka" },
-            { id: 90, title: "Happy Trombones", genre: "Konzertwerk" },
-            { id: 91, title: "Italo Pop Classics", genre: "Pop" },
-            { id: 92, title: "Viva Colonia", genre: "Pop" },
-            { id: 93, title: "Hulapalu", genre: "Pop" },
-            { id: 94, title: "Nur noch Schuhe an", genre: "Pop" },
-            { id: 95, title: "Ein Komliment", genre: "Pop" },
-            { id: 96, title: "Moskau", genre: "Pop" },
-            { id: 97, title: "Fly Me To The Moon", genre: "Jazz" },
-            { id: 98, title: "Pur Party Hit Mix", genre: "Pop" },
-            { id: 99, title: "Skandal im Sperberzirk", genre: "Pop" },
-            { id: 100, title: "Dem Land Tirol die Treue", genre: "Marsch" },
-            { id: 101, title: "Ham kummst", genre: "Pop" },
-            { id: 102, title: "Cordula Grün", genre: "Pop" },
-            { id: 103, title: "I'm Gonna Be (500 Miles)", genre: "Pop" },
-            { id: 104, title: "Narcottic", genre: "Rock" },
-            { id: 105, title: "Altes Fieber", genre: "Pop" },
-            { id: 106, title: "Layla", genre: "Pop" },
-            { id: 107, title: "A Million Dreams", genre: "Musical" },
-            { id: 108, title: "Happy", genre: "Pop" },
-            { id: 109, title: "Latin Gold", genre: "Latin" },
-            { id: 110, title: "Rolling in the Deep", genre: "Pop" },
-            { id: 111, title: "Smoke on the Water", genre: "Rock" },
-            { id: 112, title: "Blinding Lights", genre: "Pop" },
-            { id: 113, title: "Pata Pata", genre: "World" },
-            { id: 114, title: "Malvasia", genre: "Konzertwerk" },
-            { id: 115, title: "Salemonia", genre: "Konzertwerk" },
-            { id: 116, title: "Deutschmeister Regimentsmarsch", genre: "Marsch" },
-            { id: 117, title: "Teppichklopfer-Polka", genre: "Polka" },
-            { id: 118, title: "Auf Wanderschaft", genre: "Marsch" },
-            { id: 119, title: "Musik im Abendlicht", genre: "Konzertwerk" }
-        ];
+  document.getElementById("pageDots").innerHTML = Array.from({length: totalPages}, (_, index) =>
+    `<span class="dot ${index === currentSetlistPage ? "active" : ""}"></span>`
+  ).join("");
+}
 
-        // Current setlist
-        let currentSetlist = [];
-        
-        // Pagination variables
-        let currentPage = 1;
-        const itemsPerPage = 20;
-        let filteredData = [...musicData];
+function nextSetlistPage() {
+  const totalPages = Math.max(1, Math.ceil(currentSetlist.length / PAGE_SIZE));
+  if (currentSetlistPage < totalPages - 1) {
+    currentSetlistPage++;
+    renderSetlist();
+  }
+}
+function prevSetlistPage() {
+  if (currentSetlistPage > 0) {
+    currentSetlistPage--;
+    renderSetlist();
+  }
+}
 
-        // DOM Elements
-        const searchInput = document.getElementById('searchInput');
-        const clearSearchBtn = document.getElementById('clearSearch');
-        const resultsBody = document.getElementById('resultsBody');
-        const noResults = document.getElementById('noResults');
-        const exportPDFBtn = document.getElementById('exportPDF');
-        const resetFiltersBtn = document.getElementById('resetFilters');
-        const tabs = document.querySelectorAll('.tab');
-        const tabContents = document.querySelectorAll('.tab-content');
-        const setlistItems = document.getElementById('setlistItems');
-        const saveSetlistBtn = document.getElementById('saveSetlist');
-        const loadSetlistBtn = document.getElementById('loadSetlist');
-        const exportSetlistPDFBtn = document.getElementById('exportSetlistPDF');
-        const clearSetlistBtn = document.getElementById('clearSetlist');
-        const saveSetlistModal = document.getElementById('saveSetlistModal');
-        const loadSetlistModal = document.getElementById('loadSetlistModal');
-        const confirmSaveSetlistBtn = document.getElementById('confirmSaveSetlist');
-        const cancelSaveSetlistBtn = document.getElementById('cancelSaveSetlist');
-        const cancelLoadSetlistBtn = document.getElementById('cancelLoadSetlist');
-        const setlistNameInput = document.getElementById('setlistName');
-        const setlistDescriptionInput = document.getElementById('setlistDescription');
-        const savedSetlistsContainer = document.getElementById('savedSetlists');
-        const paginationContainer = document.getElementById('pagination');
-        const genreFilter = document.getElementById('genreFilter');
+document.getElementById("nextPage").addEventListener("click", nextSetlistPage);
+document.getElementById("prevPage").addEventListener("click", prevSetlistPage);
+document.getElementById("showCurrentSetlist").addEventListener("click", () => {
+  closeOverlay("menuOverlay");
+  renderSetlist();
+  showView("setlistView");
+});
 
-        // Initialize the page
-        document.addEventListener('DOMContentLoaded', function() {
-            populateGenreFilter();
-            displayMusicData(getPaginatedData());
-            setupEventListeners();
-            updateSetlistDisplay();
-            updatePagination();
-        });
+const stage = document.getElementById("setlistStage");
+stage.addEventListener("touchstart", event => touchStartX = event.changedTouches[0].clientX, {passive: true});
+stage.addEventListener("touchend", event => {
+  if (touchStartX === null) return;
+  const delta = event.changedTouches[0].clientX - touchStartX;
+  if (Math.abs(delta) > 45) delta < 0 ? nextSetlistPage() : prevSetlistPage();
+  touchStartX = null;
+}, {passive: true});
 
-        // Populate genre filter dropdown
-        function populateGenreFilter() {
-            const genres = [...new Set(musicData.map(item => item.genre))].sort();
-            
-            genres.forEach(genre => {
-                const option = document.createElement('option');
-                option.value = genre;
-                option.textContent = genre;
-                genreFilter.appendChild(option);
-            });
-        }
+function buildGenreGrid() {
+  const counts = musicData.reduce((map, item) => {
+    map[item.genre] = (map[item.genre] || 0) + 1;
+    return map;
+  }, {});
+  const genres = Object.keys(counts).sort((a, b) => a.localeCompare(b, "de"));
 
-        // Setup event listeners
-        function setupEventListeners() {
-            // Search functionality
-            searchInput.addEventListener('input', handleSearch);
-            clearSearchBtn.addEventListener('click', clearSearch);
-            
-            // Table sorting
-            document.querySelectorAll('.results-table th[data-sort]').forEach(th => {
-                th.addEventListener('click', () => sortTable(th.dataset.sort));
-            });
-            
-            // Export functionality
-            exportPDFBtn.addEventListener('click', exportToPDF);
-            resetFiltersBtn.addEventListener('click', resetFilters);
-            
-            // Tab switching
-            tabs.forEach(tab => {
-                tab.addEventListener('click', () => switchTab(tab.dataset.tab));
-            });
-            
-            // Setlist actions
-            saveSetlistBtn.addEventListener('click', openSaveSetlistModal);
-            loadSetlistBtn.addEventListener('click', openLoadSetlistModal);
-            exportSetlistPDFBtn.addEventListener('click', exportSetlistToPDF);
-            clearSetlistBtn.addEventListener('click', confirmClearSetlist);
-            
-            // Modal actions
-            document.querySelectorAll('.close-modal').forEach(btn => {
-                btn.addEventListener('click', closeAllModals);
-            });
-            confirmSaveSetlistBtn.addEventListener('click', saveCurrentSetlist);
-            cancelSaveSetlistBtn.addEventListener('click', closeAllModals);
-            cancelLoadSetlistBtn.addEventListener('click', closeAllModals);
-            
-            // Filter actions
-            genreFilter.addEventListener('change', applyFilters);
-        }
+  document.getElementById("genreGrid").innerHTML = genres.map(genre => `
+    <button class="genre-card" data-genre="${genre}">
+      <strong>${genre}</strong>
+      <span>${counts[genre]} Stücke</span>
+    </button>`).join("");
+}
 
-        // Get paginated data
-        function getPaginatedData() {
-            const startIndex = (currentPage - 1) * itemsPerPage;
-            const endIndex = startIndex + itemsPerPage;
-            return filteredData.slice(startIndex, endIndex);
-        }
+document.getElementById("openGenres").addEventListener("click", () => {
+  closeOverlay("menuOverlay");
+  buildGenreGrid();
+  openOverlay("genresOverlay");
+});
+document.getElementById("closeGenres").addEventListener("click", () => closeOverlay("genresOverlay"));
+document.getElementById("genreGrid").addEventListener("click", event => {
+  const card = event.target.closest("[data-genre]");
+  if (!card) return;
+  const genre = card.dataset.genre;
+  closeOverlay("genresOverlay");
+  document.getElementById("genreTitle").textContent = genre;
+  const items = musicData.filter(item => item.genre === genre);
+  document.getElementById("genreResults").innerHTML = items.map(item => `
+    <button class="song-row">
+      <span class="song-number">${item.id}</span>
+      <span class="song-title">${item.title}</span>
+    </button>`).join("");
+  showView("genreView");
+});
+document.getElementById("backGenres").addEventListener("click", () => {
+  buildGenreGrid();
+  openOverlay("genresOverlay");
+});
 
-        // Update pagination controls
-        function updatePagination() {
-            const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-            paginationContainer.innerHTML = '';
-            
-            if (totalPages <= 1) {
-                return;
-            }
-            
-            // Previous button
-            if (currentPage > 1) {
-                const prevButton = document.createElement('button');
-                prevButton.innerHTML = '&laquo;';
-                prevButton.addEventListener('click', () => {
-                    currentPage--;
-                    displayMusicData(getPaginatedData());
-                    updatePagination();
-                });
-                paginationContainer.appendChild(prevButton);
-            }
-            
-            // Page buttons
-            for (let i = 1; i <= totalPages; i++) {
-                const pageButton = document.createElement('button');
-                pageButton.textContent = i;
-                
-                if (i === currentPage) {
-                    pageButton.classList.add('active');
-                }
-                
-                pageButton.addEventListener('click', () => {
-                    currentPage = i;
-                    displayMusicData(getPaginatedData());
-                    updatePagination();
-                });
-                
-                paginationContainer.appendChild(pageButton);
-            }
-            
-            // Next button
-            if (currentPage < totalPages) {
-                const nextButton = document.createElement('button');
-                nextButton.innerHTML = '&raquo;';
-                nextButton.addEventListener('click', () => {
-                    currentPage++;
-                    displayMusicData(getPaginatedData());
-                    updatePagination();
-                });
-                paginationContainer.appendChild(nextButton);
-            }
-        }
+["menuOverlay","setlistOverlay","genresOverlay"].forEach(id => {
+  document.getElementById(id).addEventListener("click", event => {
+    if (event.target.id === id) closeOverlay(id);
+  });
+});
 
-        // Display music data in the table
-        function displayMusicData(data) {
-            resultsBody.innerHTML = '';
-            
-            if (data.length === 0) {
-                noResults.style.display = 'block';
-                return;
-            }
-            
-            noResults.style.display = 'none';
-            
-            data.forEach(item => {
-                const row = document.createElement('tr');
-                
-                // Create genre badge
-                const genreBadge = `<span class="badge badge-genre">${item.genre}</span>`;
-                
-                // Check if item is already in setlist
-                const isInSetlist = currentSetlist.some(setlistItem => setlistItem.id === item.id);
-                
-                row.innerHTML = `
-                    <td class="number-column">${item.id}</td>
-                    <td>${item.title}</td>
-                    <td>${genreBadge}</td>
-                    <td>
-                        <button class="star-button ${isInSetlist ? 'active' : ''}" data-id="${item.id}">
-                            <i class="fas fa-star"></i>
-                        </button>
-                    </td>
-                `;
-                
-                resultsBody.appendChild(row);
-            });
-            
-            // Add event listeners to star buttons
-            document.querySelectorAll('.star-button').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const id = parseInt(btn.dataset.id);
-                    if (btn.classList.contains('active')) {
-                        // Remove from setlist
-                        removeFromSetlistById(id);
-                        btn.classList.remove('active');
-                    } else {
-                        // Add to setlist
-                        addToSetlist(id);
-                        btn.classList.add('active');
-                    }
-                });
-            });
-        }
+renderSearch();
+renderSetlist();
 
-        // Handle search input
-        function handleSearch() {
-            applyFilters();
-        }
-
-        // Apply all filters
-        function applyFilters() {
-            const searchTerm = searchInput.value.toLowerCase();
-            const selectedGenre = genreFilter.value;
-            
-            if (searchTerm) {
-                clearSearchBtn.style.display = 'block';
-            } else {
-                clearSearchBtn.style.display = 'none';
-            }
-            
-            filteredData = musicData.filter(item => {
-                const matchesSearch = 
-                    item.title.toLowerCase().includes(searchTerm) ||
-                    item.genre.toLowerCase().includes(searchTerm) ||
-                    item.id.toString().includes(searchTerm); // Search by number
-                
-                const matchesGenre = selectedGenre === '' || item.genre === selectedGenre;
-                
-                return matchesSearch && matchesGenre;
-            });
-            
-            currentPage = 1;
-            displayMusicData(getPaginatedData());
-            updatePagination();
-        }
-
-        // Clear search
-        function clearSearch() {
-            searchInput.value = '';
-            clearSearchBtn.style.display = 'none';
-            applyFilters();
-        }
-
-        // Sort table by column
-        function sortTable(column) {
-            filteredData.sort((a, b) => {
-                if (a[column] < b[column]) return -1;
-                if (a[column] > b[column]) return 1;
-                return 0;
-            });
-            
-            displayMusicData(getPaginatedData());
-        }
-
-        // Export table to PDF
-        function exportToPDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            
-            doc.text('MV Endersbach Musikarchiv', 14, 15);
-            
-            const tableData = [];
-            musicData.forEach(item => {
-                tableData.push([item.id, item.title, item.genre]);
-            });
-            
-            doc.autoTable({
-                head: [['Nr.', 'Titel', 'Genre']],
-                body: tableData,
-                startY: 20
-            });
-            
-            doc.save('musikarchiv.pdf');
-        }
-
-        // Reset filters
-        function resetFilters() {
-            clearSearch();
-            genreFilter.value = '';
-            filteredData = [...musicData];
-            currentPage = 1;
-            displayMusicData(getPaginatedData());
-            updatePagination();
-        }
-
-        // Switch between tabs
-        function switchTab(tabId) {
-            tabs.forEach(tab => {
-                if (tab.dataset.tab === tabId) {
-                    tab.classList.add('active');
-                } else {
-                    tab.classList.remove('active');
-                }
-            });
-            
-            tabContents.forEach(content => {
-                if (content.id === `${tabId}-tab`) {
-                    content.classList.add('active');
-                } else {
-                    content.classList.remove('active');
-                }
-            });
-        }
-
-        // Add item to setlist
-        function addToSetlist(id) {
-            const item = musicData.find(item => item.id === id);
-            
-            if (item && !currentSetlist.some(setlistItem => setlistItem.id === id)) {
-                currentSetlist.push({...item, setlistId: Date.now()});
-                updateSetlistDisplay();
-                
-                // Show a brief notification
-                const notification = document.createElement('div');
-                notification.textContent = `"${item.title}" zur Setlist hinzugefügt`;
-                notification.style.position = 'fixed';
-                notification.style.bottom = '20px';
-                notification.style.right = '20px';
-                notification.style.backgroundColor = 'var(--primary-color)';
-                notification.style.color = 'white';
-                notification.style.padding = '10px 20px';
-                notification.style.borderRadius = '5px';
-                notification.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
-                notification.style.zIndex = '1000';
-                
-                document.body.appendChild(notification);
-                
-                setTimeout(() => {
-                    notification.style.opacity = '0';
-                    notification.style.transition = 'opacity 0.5s';
-                    setTimeout(() => {
-                        document.body.removeChild(notification);
-                    }, 500);
-                }, 2000);
-            }
-        }
-
-        // Update setlist display with drag and drop functionality
-        function updateSetlistDisplay() {
-            if (currentSetlist.length === 0) {
-                setlistItems.innerHTML = '<div class="empty-setlist">Die Setlist ist leer. Füge Stücke aus der Musiksuche hinzu.</div>';
-                return;
-            }
-            
-            setlistItems.innerHTML = '';
-            
-            currentSetlist.forEach((item, index) => {
-                const setlistItem = document.createElement('div');
-                setlistItem.className = 'setlist-item';
-                setlistItem.draggable = true;
-                setlistItem.dataset.setlistId = item.setlistId;
-                
-                setlistItem.innerHTML = `
-                    <div class="setlist-item-info">
-                        <i class="fas fa-grip-lines setlist-drag-handle"></i>
-                        <span class="setlist-item-title">${index + 1}. ${item.title}</span>
-                        <div class="setlist-item-composer">Nr. ${item.id} • ${item.genre}</div>
-                    </div>
-                    <div class="setlist-item-actions">
-                        <button class="remove-from-setlist" data-setlist-id="${item.setlistId}">
-                            <i class="fas fa-times"></i> Entfernen
-                        </button>
-                    </div>
-                `;
-                
-                setlistItems.appendChild(setlistItem);
-            });
-            
-            // Add event listeners to setlist item buttons
-            document.querySelectorAll('.remove-from-setlist').forEach(btn => {
-                btn.addEventListener('click', () => removeFromSetlist(parseInt(btn.dataset.setlistId)));
-            });
-            
-            // Setup drag and drop functionality
-            setupDragAndDrop();
-        }
-
-        // Setup drag and drop for setlist items
-        function setupDragAndDrop() {
-            const setlistItemElements = document.querySelectorAll('.setlist-item');
-            
-            setlistItemElements.forEach(item => {
-                item.addEventListener('dragstart', handleDragStart);
-                item.addEventListener('dragover', handleDragOver);
-                item.addEventListener('dragenter', handleDragEnter);
-                item.addEventListener('dragleave', handleDragLeave);
-                item.addEventListener('drop', handleDrop);
-                item.addEventListener('dragend', handleDragEnd);
-            });
-        }
-
-        let draggedItem = null;
-
-        function handleDragStart(e) {
-            draggedItem = this;
-            this.classList.add('dragging');
-            
-            // Set data for drag operation
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', this.dataset.setlistId);
-            
-            // For Firefox
-            e.dataTransfer.setDragImage(this, 20, 20);
-        }
-
-        function handleDragOver(e) {
-            if (e.preventDefault) {
-                e.preventDefault(); // Necessary to allow drop
-            }
-            e.dataTransfer.dropEffect = 'move';
-            return false;
-        }
-
-        function handleDragEnter(e) {
-            this.classList.add('drag-over');
-        }
-
-        function handleDragLeave(e) {
-            this.classList.remove('drag-over');
-        }
-
-        function handleDrop(e) {
-            e.stopPropagation(); // Stops the browser from redirecting
-            
-            if (draggedItem !== this) {
-                // Get the dragged and target setlist IDs
-                const draggedSetlistId = parseInt(draggedItem.dataset.setlistId);
-                const targetSetlistId = parseInt(this.dataset.setlistId);
-                
-                // Find their positions in the currentSetlist array
-                const draggedIndex = currentSetlist.findIndex(item => item.setlistId === draggedSetlistId);
-                const targetIndex = currentSetlist.findIndex(item => item.setlistId === targetSetlistId);
-                
-                // Reorder the array
-                const [movedItem] = currentSetlist.splice(draggedIndex, 1);
-                currentSetlist.splice(targetIndex, 0, movedItem);
-                
-                // Update the display
-                updateSetlistDisplay();
-            }
-            
-            this.classList.remove('drag-over');
-            return false;
-        }
-
-        function handleDragEnd(e) {
-            this.classList.remove('dragging');
-            
-            // Clear all drag-over classes
-            document.querySelectorAll('.setlist-item').forEach(item => {
-                item.classList.remove('drag-over');
-            });
-            
-            draggedItem = null;
-        }
-
-        // Remove item from setlist
-        function removeFromSetlist(setlistId) {
-            currentSetlist = currentSetlist.filter(item => item.setlistId !== setlistId);
-            updateSetlistDisplay();
-            
-            // Update star buttons in the search results
-            const removedItem = musicData.find(item => 
-                currentSetlist.some(setlistItem => setlistItem.id === item.id) === false
-            );
-            
-            if (removedItem) {
-                const starButton = document.querySelector(`.star-button[data-id="${removedItem.id}"]`);
-                if (starButton) {
-                    starButton.classList.remove('active');
-                }
-            }
-        }
-
-        // Remove item from setlist by music ID
-        function removeFromSetlistById(id) {
-            currentSetlist = currentSetlist.filter(item => item.id !== id);
-            updateSetlistDisplay();
-        }
-
-        // Export setlist to PDF
-        function exportSetlistToPDF() {
-            if (currentSetlist.length === 0) {
-                alert('Die Setlist ist leer.');
-                return;
-            }
-            
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            
-            doc.text('MV Endersbach - Setlist', 14, 15);
-            
-            const tableData = [];
-            currentSetlist.forEach((item, index) => {
-                tableData.push([index + 1, item.title, item.genre, item.id]);
-            });
-            
-            doc.autoTable({
-                head: [['#', 'Titel', 'Genre', 'Archiv-Nr.']],
-                body: tableData,
-                startY: 20
-            });
-            
-            doc.save('setlist.pdf');
-        }
-
-        // Confirm clear setlist
-        function confirmClearSetlist() {
-            if (currentSetlist.length === 0) {
-                return;
-            }
-            
-            if (confirm('Möchtest du wirklich die gesamte Setlist leeren?')) {
-                currentSetlist = [];
-                updateSetlistDisplay();
-                
-                // Update all star buttons
-                document.querySelectorAll('.star-button').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-            }
-        }
-
-        // Open save setlist modal
-        function openSaveSetlistModal() {
-            if (currentSetlist.length === 0) {
-                alert('Die Setlist ist leer.');
-                return;
-            }
-            
-            setlistNameInput.value = '';
-            setlistDescriptionInput.value = '';
-            saveSetlistModal.style.display = 'flex';
-        }
-
-        // Open load setlist modal
-        function openLoadSetlistModal() {
-            // Get saved setlists from localStorage
-            const savedSetlists = JSON.parse(localStorage.getItem('savedSetlists')) || [];
-            
-            if (savedSetlists.length === 0) {
-                savedSetlistsContainer.innerHTML = '<div class="empty-setlist">Keine gespeicherten Setlists vorhanden.</div>';
-            } else {
-                savedSetlistsContainer.innerHTML = '';
-                
-                savedSetlists.forEach((setlist, index) => {
-                    const setlistElement = document.createElement('div');
-                    setlistElement.className = 'setlist-item';
-                    
-                    const itemCount = setlist.items.length;
-                    const date = new Date(setlist.savedAt).toLocaleDateString();
-                    
-                    setlistElement.innerHTML = `
-                        <div class="setlist-item-info">
-                            <div class="setlist-item-title">${setlist.name}</div>
-                            <div class="setlist-item-composer">${itemCount} Stücke • Gespeichert am ${date}</div>
-                            ${setlist.description ? `<div class="setlist-item-description">${setlist.description}</div>` : ''}
-                        </div>
-                        <div class="setlist-item-actions">
-                            <button class="load-setlist-btn" data-index="${index}">Laden</button>
-                            <button class="remove-setlist-btn" data-index="${index}">Löschen</button>
-                        </div>
-                    `;
-                    
-                    savedSetlistsContainer.appendChild(setlistElement);
-                });
-                
-                // Add event listeners to setlist buttons
-                document.querySelectorAll('.load-setlist-btn').forEach(btn => {
-                    btn.addEventListener('click', () => loadSetlist(parseInt(btn.dataset.index)));
-                });
-                
-                document.querySelectorAll('.remove-setlist-btn').forEach(btn => {
-                    btn.addEventListener('click', () => removeSetlist(parseInt(btn.dataset.index)));
-                });
-            }
-            
-            loadSetlistModal.style.display = 'flex';
-        }
-
-        // Close all modals
-        function closeAllModals() {
-            saveSetlistModal.style.display = 'none';
-            loadSetlistModal.style.display = 'none';
-        }
-
-        // Save current setlist
-        function saveCurrentSetlist() {
-            const name = setlistNameInput.value.trim();
-            
-            if (!name) {
-                alert('Bitte gib einen Namen für die Setlist ein.');
-                return;
-            }
-            
-            const description = setlistDescriptionInput.value.trim();
-            
-            // Get saved setlists from localStorage
-            const savedSetlists = JSON.parse(localStorage.getItem('savedSetlists')) || [];
-            
-            // Add new setlist
-            savedSetlists.push({
-                name,
-                description,
-                items: currentSetlist,
-                savedAt: Date.now()
-            });
-            
-            // Save to localStorage
-            localStorage.setItem('savedSetlists', JSON.stringify(savedSetlists));
-            
-            closeAllModals();
-            
-            // Show confirmation
-            alert(`Setlist "${name}" wurde gespeichert.`);
-        }
-
-        // Load setlist
-        function loadSetlist(index) {
-            // Get saved setlists from localStorage
-            const savedSetlists = JSON.parse(localStorage.getItem('savedSetlists')) || [];
-            
-            if (index >= 0 && index < savedSetlists.length) {
-                if (currentSetlist.length > 0) {
-                    if (!confirm('Möchtest du die aktuelle Setlist überschreiben?')) {
-                        return;
-                    }
-                }
-                
-                currentSetlist = savedSetlists[index].items;
-                updateSetlistDisplay();
-                closeAllModals();
-                
-                // Update star buttons
-                document.querySelectorAll('.star-button').forEach(btn => {
-                    const id = parseInt(btn.dataset.id);
-                    if (currentSetlist.some(item => item.id === id)) {
-                        btn.classList.add('active');
-                    } else {
-                        btn.classList.remove('active');
-                    }
-                });
-                
-                // Show confirmation
-                alert(`Setlist "${savedSetlists[index].name}" wurde geladen.`);
-            }
-        }
-
-        // Remove setlist
-        function removeSetlist(index) {
-            // Get saved setlists from localStorage
-            const savedSetlists = JSON.parse(localStorage.getItem('savedSetlists')) || [];
-            
-            if (index >= 0 && index < savedSetlists.length) {
-                if (confirm(`Möchtest du die Setlist "${savedSetlists[index].name}" wirklich löschen?`)) {
-                    const removedSetlist = savedSetlists.splice(index, 1)[0];
-                    
-                    // Save updated setlists to localStorage
-                    localStorage.setItem('savedSetlists', JSON.stringify(savedSetlists));
-                    
-                    // Refresh the modal content
-                    openLoadSetlistModal();
-                    
-                    // Show confirmation
-                    alert(`Setlist "${removedSetlist.name}" wurde gelöscht.`);
-                }
-            }
-        }
-    </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'941ac645659992a8',t:'MTc0NzU2NTIyNi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><iframe height="1" width="1" style="position: absolute; top: 0px; left: 0px; border: none; visibility: hidden;"></iframe>
-
-</body></html>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("service-worker.js").catch(() => {}));
+}
+</script>
+</body>
+</html>
